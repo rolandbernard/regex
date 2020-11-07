@@ -3,18 +3,22 @@
 
 #include "regex.h"
 
-RegEx compileMatchingRegEx(const char* regex_string) {
+Regex compileMatchingRegex(const char* regex_string) {
     return NULL;
 }
 
-RegEx compileMultiMatchingRegEx(int num_regex, const char* const* regex_strings) {
+Regex compileMultiMatchingRegex(int num_regex, const char* const* regex_strings) {
     return NULL;
 }
 
-bool startsWithRegex(RegEx regex, const char* string, int* len, int* exit_num) {
+bool startsWithRegex(Regex regex, const char* string, int* len, int* exit_num) {
     return false;
 }
 
-void disposeRegEx(RegEx regex) {
+bool matchRegex(Regex regex, const char* string, int* exit_num) {
+    return false;
+}
+
+void disposeRegex(Regex regex) {
 
 }

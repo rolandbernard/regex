@@ -17,6 +17,7 @@ typedef struct {
     TestFunction function;
 } Test;
 
+#define LEN(ARRAY) (sizeof(ARRAY) / sizeof((ARRAY)[0]))
 #define ASSERT(COND) { if (!(COND)) { TestResult ret = { 1, 0, "Failed assertion: "  #COND }; return ret; }; }
 
 #define TEST(NAME, BODY) { #NAME, ({ TestResult NAME(int dep) { BODY; return SUCCESS; }; NAME; }) }
@@ -29,13 +30,13 @@ typedef struct {
         fprintf(stderr, "%s" #NAME ":\n", ind); \
         ind[dep * 2] = ' '; ind[dep * 2 + 2] = 0; \
         Test tests [] = { __VA_ARGS__ }; \
-        for(int t = 0; t < sizeof(tests) / sizeof(tests[0]); t++) { \
+        for(int t = 0; t < LEN(tests); t++) { \
             TestResult result = tests[t].function(dep + 1); \
             if (result.msg != NULL) { \
                 if(result.failed == 0) {  \
-                    fprintf(stderr, "%s\e[32mPassed\e[m test '%s'\n", ind, tests[0].name); \
+                    fprintf(stderr, "%s\e[32mPassed\e[m test '%s'\n", ind, tests[t].name); \
                 } else { \
-                    fprintf(stderr, "%s\e[31mFailed\e[m test '%s'\n%s  \e[31m|\e[m %s\n", ind, tests[0].name, ind, result.msg); \
+                    fprintf(stderr, "%s\e[31mFailed\e[m test '%s'\n%s  \e[31m|\e[m %s\n", ind, tests[t].name, ind, result.msg); \
                 } \
             } \
             ret.passed += result.passed; \
@@ -50,13 +51,13 @@ typedef struct {
     int num_pass = 0; \
     fprintf(stderr, "\n"); \
     Test tests [] = { __VA_ARGS__ }; \
-    for(int t = 0; t < sizeof(tests) / sizeof(tests[0]); t++) { \
+    for(int t = 0; t < LEN(tests); t++) { \
         TestResult result = tests[t].function(0); \
         if (result.msg != NULL) { \
             if(result.failed == 0) {  \
-                fprintf(stderr, "\e[32mPassed\e[m test '%s'\n", tests[0].name); \
+                fprintf(stderr, "\e[32mPassed\e[m test '%s'\n", tests[t].name); \
             } else { \
-                fprintf(stderr, "\e[31mFailed\e[m test '%s'\n  \e[31m|\e[m %s\n", tests[0].name, result.msg); \
+                fprintf(stderr, "\e[31mFailed\e[m test '%s'\n  \e[31m|\e[m %s\n", tests[t].name, result.msg); \
             } \
         } \
         num_pass += result.passed; \

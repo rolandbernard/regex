@@ -9,16 +9,18 @@ typedef struct {
         int next_state;
         int end_point;
     };
-} RegExState;
+} RegexState;
 
-typedef RegExState (*RegEx)[256];
+typedef RegexState (*Regex)[256];
 
-RegEx compileMatchingRegEx(const char* regex_string);
+Regex compileMatchingRegex(const char* regex_string);
 
-RegEx compileMultiMatchingRegEx(int num_regex, const char* const* regex_strings);
+Regex compileMultiMatchingRegex(int num_regex, const char* const* regex_strings);
 
-bool startsWithRegex(RegEx regex, const char* string, int* len, int* exit_num);
+bool startsWithRegex(Regex regex, const char* string, int* len, int* exit_num);
 
-void disposeRegEx(RegEx regex);
+bool matchRegex(Regex regex, const char* string, int* exit_num);
+
+void disposeRegex(Regex regex);
 
 #endif
