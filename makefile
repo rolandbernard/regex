@@ -5,7 +5,7 @@ IDIR=./src
 SDIR=./src
 
 CC=gcc
-LINK=g++
+LINK=gcc
 DFLAGS=-g -O0 -fsanitize=address,leak,undefined
 RFLAGS=-O3
 CFLAGS=-I$(IDIR) -Wall $(DFLAGS)
