@@ -60,8 +60,22 @@ static void freeNodes(RegexNodeSet* node_set) {
     free(node_set->nodes);
 }
 
-static RegexNodeRef copyNodesBetween(RegexNodeSet* nodes, RegexNodeRef start, RegexNodeRef end, RegexNodeRef destination) {
-    return -1;
+static RegexNodeRef cloneLastNodes(RegexNodeSet* nodes, RegexNodeRef start, RegexNodeRef end) {
+    RegexNodeRef last_node = nodes->node_count - 1;
+    for(int n = start; n < last_node; n++) {
+        RegexNode node = REGEX_NODE_INIT;
+        pushNodeToRegexNodeSet(nodes, node);
+    }
+    for(int n = start; n <= last_node; n++) {
+        for(int c = 0; c < nodes->nodes[n].connection_count; c++) {
+            RegexConnection connection = nodes->nodes[n].connections[c];
+            if(connection.next_node >= start && connection.next_node <= last_node) {
+                connection.next_node += last_node - start;
+                pushConnectionToRegexNode(&nodes->nodes[n + (last_node - start)], connection);
+            }
+        }
+    }
+    return end + (last_node - start);
 }
 
 static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char* regex, const char** end_pos, bool inside_or) {
@@ -176,46 +190,61 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
         case '{': {
             if(last_node == -1) {
                 return -1;
-            }
-            regex++;
-            int min = 0;
-            while (isspace(*regex)) {
+            } else {
                 regex++;
-            }
-            while (*regex >= '0' && *regex <= '9') {
-                min *= 10;
-                min += *regex - '0';
-                regex++;
-            }
-            while (isspace(*regex)) {
-                regex++;
-            }
-            int max = min;
-            if(*regex == ',') {
+                int min = 0;
                 while (isspace(*regex)) {
                     regex++;
                 }
-                regex++;
-                if(*regex == '}') {
-                    max = -1;
-                } else {
-                    max = 0;
-                    while (*regex >= '0' && *regex <= '9') {
-                        max *= 10;
-                        max += *regex - '0';
+                while (*regex >= '0' && *regex <= '9') {
+                    min *= 10;
+                    min += *regex - '0';
+                    regex++;
+                }
+                while (isspace(*regex)) {
+                    regex++;
+                }
+                int max = min;
+                if(*regex == ',') {
+                    while (isspace(*regex)) {
+                        regex++;
+                    }
+                    regex++;
+                    if(*regex == '}') {
+                        max = -1;
+                    } else {
+                        max = 0;
+                        while (*regex >= '0' && *regex <= '9') {
+                            max *= 10;
+                            max += *regex - '0';
+                            regex++;
+                        }
+                    }
+                    while (isspace(*regex)) {
                         regex++;
                     }
                 }
-                while (isspace(*regex)) {
+                if(*regex != '}' || (max != -1 && max < min)) {
+                    return -1;
+                } else {
                     regex++;
+                    for(int i = 1; i < min; i++) {
+                        RegexNodeRef new_end = cloneLastNodes(nodes, last_node, current_node);
+                        last_node = current_node;
+                        current_node = new_end;
+                    }
+                    if(max == -1) {
+                        RegexConnection connection_repeat = {
+                            .class = NULL,
+                            .class_len = 0,
+                            .next_node = last_node,
+                        };
+                        pushConnectionToRegexNode(&nodes->nodes[current_node], connection_repeat);
+                    } else if(max != min) {
+
+                    }
                 }
             }
-            if(*regex != '}' || (max != -1 && max < min)) {
-                return -1;
-            } else {
-                regex++;
-            }
-            
             break;
         }
         case '\\': {
