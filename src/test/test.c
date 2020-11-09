@@ -6,7 +6,7 @@
 int main() {
     return RUN_TESTS(
         TEST(compiling_a_valid_regex_returns_non_null, ({
-            const char* examples[] = { "test", "ab*c", "d(e?f)*", "(qe)?*d+" };
+            const char* examples[] = { "test", "ab*c", "d(e?f)*", "(qe)?*d+", "(a?b+){3}", "(a?b+c){1,4}", "(x?yz){3,}" };
             for(int e = 0; e < LEN(examples); e++) {
                 Regex regex = compileMatchingRegex(examples[e]);
                 ASSERT(regex != NULL);
@@ -14,7 +14,7 @@ int main() {
             }
         })),
         TEST(compiling_a_invalid_regex_returns_null, ({
-            const char* examples[] = { "test[", "test{", "**", "++", "??", "]" };
+            const char* examples[] = { "test[", "test{", "**", "++", "??", "{", "{5}", "ab(c" };
             for(int e = 0; e < LEN(examples); e++) {
                 Regex regex = compileMatchingRegex(examples[e]);
                 ASSERT(regex == NULL);
