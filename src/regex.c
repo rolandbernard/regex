@@ -86,6 +86,9 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
         case '[': {
             int len = 1;
             while(regex[len] != 0 && regex[len] != ']') {
+                if(regex[len] == '\\') {
+                    len++;
+                }
                 len++;
             }
             if(regex[len] == 0) {
@@ -241,49 +244,37 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
                         };
                         pushConnectionToRegexNode(&nodes->nodes[current_node], connection_repeat);
                     } else if(max != min) {
-
+                        RegexNodeRef new_end = cloneLastNodes(nodes, last_node, current_node);
+                        last_node = current_node;
+                        current_node = new_end;
+                        RegexConnection connection = {
+                            .class = NULL,
+                            .class_len = 0,
+                            .next_node = current_node,
+                        };
+                        pushConnectionToRegexNode(&nodes->nodes[last_node], connection);
+                        for(int i = min + 1; i < max; i++) {
+                            RegexNodeRef new_end = cloneLastNodes(nodes, last_node, current_node);
+                            last_node = current_node;
+                            current_node = new_end;
+                        }
                     }
                 }
             }
             break;
         }
         case '\\': {
-            switch (regex[1]) {
-            case 'd':
-            case 'D':
-            case 'w':
-            case 'W':
-            case 's':
-            case 'S': {
-                RegexNode node = REGEX_NODE_INIT;
-                RegexNodeRef node_ref = pushNodeToRegexNodeSet(nodes, node);
-                RegexConnection connection = {
-                    .class = regex,
-                    .class_len = 2,
-                    .next_node = node_ref,
-                };
-                pushConnectionToRegexNode(&nodes->nodes[current_node], connection);
-                last_node = current_node;
-                current_node = node_ref;
-                regex += 2;
-                break;
-            }
-            default: {
-                regex++;
-                RegexNode node = REGEX_NODE_INIT;
-                RegexNodeRef node_ref = pushNodeToRegexNodeSet(nodes, node);
-                RegexConnection connection = {
-                    .class = regex,
-                    .class_len = 1,
-                    .next_node = node_ref,
-                };
-                pushConnectionToRegexNode(&nodes->nodes[current_node], connection);
-                last_node = current_node;
-                current_node = node_ref;
-                regex++;
-                break;
-            }
-            }
+            RegexNode node = REGEX_NODE_INIT;
+            RegexNodeRef node_ref = pushNodeToRegexNodeSet(nodes, node);
+            RegexConnection connection = {
+                .class = regex,
+                .class_len = 2,
+                .next_node = node_ref,
+            };
+            pushConnectionToRegexNode(&nodes->nodes[current_node], connection);
+            last_node = current_node;
+            current_node = node_ref;
+            regex += 2;
             break;
         }
         default: {
@@ -304,6 +295,113 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
     }
     *end_pos = regex;
     return current_node;
+}
+
+static void resolveCharacterClass(const char* class, int len, bool* output) {
+    if (len == 1) {
+        for(int c = 0; c < 256; c++) {
+            output[c] = false;
+        }
+        output[class[0]] = true;
+    } else if (class[0] == '[') {
+        bool inverted = false;
+        int i = 1;
+        if(class[i] == '^') {
+            inverted = true;
+            i++;
+        }
+        for(int c = 0; c < 256; c++) {
+            output[c] = inverted;
+        }
+        for(; i < len - 1; i++) {
+            char c = class[i];
+            if(c == '\\') {
+                i++;
+                c = class[i];
+            }
+            if(class[i] == '-') {
+                i++;
+                char end = class[i];
+                for(int j = c; j <= end; j++) {
+                    output[j] = !inverted;
+                }
+            } else {
+                output[c] = !inverted;
+            }
+        }
+    } else if (class[0] == '\\') {
+        switch (class[1]) {
+        case 'w':
+            for(int c = 0; c < 256; c++) {
+                output[c] = isalnum(c);
+            }
+            break;
+        case 'W':
+            for(int c = 0; c < 256; c++) {
+                output[c] = !isalnum(c);
+            }
+            break;
+        case 'd':
+            for(int c = 0; c < 256; c++) {
+                output[c] = isdigit(c);
+            }
+            break;
+        case 'D':
+            for(int c = 0; c < 256; c++) {
+                output[c] = !isdigit(c);
+            }
+            break;
+        case 's':
+            for(int c = 0; c < 256; c++) {
+                output[c] = isspace(c);
+            }
+            break;
+        case 'S':
+            for(int c = 0; c < 256; c++) {
+                output[c] = !isspace(c);
+            }
+            break;
+        default: {
+            for(int c = 0; c < 256; c++) {
+                output[c] = false;
+            }
+            switch (class[1]) {
+                case 'n':
+                    output['\n'] = true;
+                    break;
+                case 'r':
+                    output['\r'] = true;
+                    break;
+                case 't':
+                    output['\t'] = true;
+                    break;
+                case 'e':
+                    output['\e'] = true;
+                    break;
+                case 'a':
+                    output['\a'] = true;
+                    break;
+                case 'b':
+                    output['\b'] = true;
+                    break;
+                case 'v':
+                    output['\v'] = true;
+                    break;
+                case 'f':
+                    output['\f'] = true;
+                    break;
+                case '0':
+                    output['\0'] = true;
+                    break;
+                default: {
+                    output[class[1]] = true;
+                    break;
+                }
+            }
+            break;
+        }
+        }
+    }
 }
 
 static Regex compileRegexToStateMashine(RegexNodeSet* nodes, RegexNodeRef start) {
