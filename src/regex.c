@@ -149,6 +149,7 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
             if(last_node == -1) {
                 return -1;
             } else {
+                regex++;
                 RegexConnection connection = {
                     .class = NULL,
                     .class_len = 0,
@@ -162,6 +163,7 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
             if(last_node == -1) {
                 return -1;
             } else {
+                regex++;
                 RegexConnection connection_skip = {
                     .class = NULL,
                     .class_len = 0,
@@ -181,6 +183,7 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
             if(last_node == -1) {
                 return -1;
             } else {
+                regex++;
                 RegexConnection connection_repeat = {
                     .class = NULL,
                     .class_len = 0,
@@ -299,10 +302,16 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
 
 static void resolveCharacterClass(const char* class, int len, bool* output) {
     if (len == 1) {
-        for(int c = 0; c < 256; c++) {
-            output[c] = false;
+        if(class[0] == '.') {
+            for(int c = 0; c < 256; c++) {
+                output[c] = true;
+            }
+        } else {
+            for(int c = 0; c < 256; c++) {
+                output[c] = false;
+            }
+            output[(unsigned char)class[0]] = true;
         }
-        output[(unsigned char)class[0]] = true;
     } else if (class[0] == '[') {
         bool inverted = false;
         int i = 1;
