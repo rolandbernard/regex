@@ -30,9 +30,9 @@ typedef struct {
 static void pushConnectionToRegexNode(RegexNode* node, RegexConnection conn) {
     if(node->connection_capacity == node->connection_count) {
         if(node->connection_capacity == 0) {
-            node->connection_count = 4;
+            node->connection_capacity = 4;
         } else {
-            node->connection_count *= 2;
+            node->connection_capacity *= 2;
         }
         node->connections = (RegexConnection*)realloc(node->connections, sizeof(RegexConnection) * node->connection_capacity);
     }
@@ -302,7 +302,7 @@ static void resolveCharacterClass(const char* class, int len, bool* output) {
         for(int c = 0; c < 256; c++) {
             output[c] = false;
         }
-        output[class[0]] = true;
+        output[(unsigned char)class[0]] = true;
     } else if (class[0] == '[') {
         bool inverted = false;
         int i = 1;
@@ -326,7 +326,7 @@ static void resolveCharacterClass(const char* class, int len, bool* output) {
                     output[j] = !inverted;
                 }
             } else {
-                output[c] = !inverted;
+                output[(unsigned char)c] = !inverted;
             }
         }
     } else if (class[0] == '\\') {
@@ -394,7 +394,7 @@ static void resolveCharacterClass(const char* class, int len, bool* output) {
                     output['\0'] = true;
                     break;
                 default: {
-                    output[class[1]] = true;
+                    output[(unsigned char)class[1]] = true;
                     break;
                 }
             }
@@ -414,11 +414,11 @@ Regex compileMatchingRegex(const char* regex_string) {
     RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, start);
     const char* end_pos;
     RegexNodeRef last_node = parseRegexGroup(&nodes, start_ref, regex_string, &end_pos, false);
-    nodes.nodes[last_node].exit_num = 0;
     if(last_node < 0 || *end_pos != 0) {
         freeNodes(&nodes);
         return NULL;
     } else {
+        nodes.nodes[last_node].exit_num = 0;
         Regex ret = compileRegexToStateMashine(&nodes, start_ref);
         freeNodes(&nodes);
         return ret;

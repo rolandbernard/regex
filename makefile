@@ -19,11 +19,7 @@ _BIN=test
 BIN=$(patsubst %,$(BDIR)/%,$(_BIN))
 
 .PHONY: all
-all: $(BIN) 
-
-.PHONY: install
-install: all
-	cp $(BIN) /usr/bin/
+all: $(BIN)
 
 $(BDIR)/test: $(OBJ)
 	mkdir -p `dirname $@`
@@ -44,3 +40,6 @@ clean:
 cleanall:
 	rm -fr $(ODIR)/* $(BDIR)/*
 
+.PHONY: check
+check: all
+	./build/bin/test
