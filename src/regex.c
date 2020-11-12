@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "regex.h"
 
@@ -306,11 +307,16 @@ static void resolveCharacterClass(const char* class, int len, bool* output) {
             for(int c = 0; c < 256; c++) {
                 output[c] = true;
             }
+            output['\n'] = false;
         } else {
             for(int c = 0; c < 256; c++) {
                 output[c] = false;
             }
-            output[(unsigned char)class[0]] = true;
+            if(class[0] == '$') {
+                output['\n'] = true;
+            } else {
+                output[(unsigned char)class[0]] = true;
+            }
         }
     } else if (class[0] == '[') {
         bool inverted = false;
@@ -413,8 +419,129 @@ static void resolveCharacterClass(const char* class, int len, bool* output) {
     }
 }
 
-static Regex compileRegexToStateMashine(RegexNodeSet* nodes, RegexNodeRef start) {
-    return NULL;
+typedef struct {
+    RegexNodeRef* nodes;
+    int num_nodes;
+    int id;
+} RegexNodeCollection;
+
+typedef struct {
+    RegexNodeCollection* nodes;
+    int node_count;
+    int node_capacity;
+    int queue_start;
+    int queue_end;
+} RegexNodeCollectionQueue;
+#define REGEX_NODE_COLLECTION_QUEUE_INIT { .nodes = NULL, .node_count = 0, .node_capacity = 0, .queue_start = 0, .queue_end = 0 }
+
+static void pushToNodeQueue(RegexNodeCollectionQueue* queue, RegexNodeCollection col) {
+    if(queue->node_capacity == queue->node_count) {
+        if(queue->node_capacity == 0) {
+            queue->node_capacity = 4;
+            queue->nodes = (RegexNodeCollection*)malloc(sizeof(RegexNodeCollection) * queue->node_capacity);
+        } else {
+            int new_capacity = 2 * queue->node_capacity;
+            queue->nodes = (RegexNodeCollection*)realloc(queue->nodes, sizeof(RegexNodeCollection) * new_capacity);
+            memmove(queue->nodes + new_capacity - queue->node_capacity + queue->queue_start,
+                queue->nodes + queue->queue_start, (queue->node_capacity - queue->queue_start) * sizeof(RegexNodeCollection));
+            queue->queue_start = new_capacity - queue->node_capacity + queue->queue_start;
+            queue->node_capacity = new_capacity;
+        }
+    }
+    queue->nodes[queue->queue_end] = col;
+    queue->queue_end = (queue->queue_end + 1) % queue->node_capacity;
+    queue->node_count++;
+}
+
+static RegexNodeCollection popFromNodeQueue(RegexNodeCollectionQueue* queue) {
+    RegexNodeCollection ret = queue->nodes[queue->queue_start];
+    queue->queue_start = (queue->queue_start + 1) % queue->node_capacity;
+    queue->node_count--;
+    return ret;
+}
+
+static bool isContainedInQueue(RegexNodeCollectionQueue* queue, RegexNodeCollection col, int* id) {
+    for(int i = queue->queue_start; i != queue->queue_end; i = (i + 1) % queue->node_capacity) {
+        if(queue->nodes[i].num_nodes == col.num_nodes) {
+            bool equal = true;
+            for(int j = 0; equal && j < col.num_nodes; j++) {
+                if(queue->nodes[i].nodes[j] != col.nodes[j]) {
+                    equal = false;
+                }
+            }
+            if(equal) {
+                *id = queue->nodes[i].id;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static int recursiveNodeReachabilitySearch(RegexNodeSet* nodes, RegexNodeRef node, bool* visited) {
+    if(!visited[node]) {
+        visited[node] = true;
+        int ret = 1;
+        for(int i = 0; i < nodes->nodes[node].connection_count; i++) {
+            RegexConnection connection = nodes->nodes[node].connections[i];
+            if(connection.class == NULL) {
+                ret += recursiveNodeReachabilitySearch(nodes, connection.next_node, visited);
+            }
+        }
+        return ret;
+    } else {
+        return 0;
+    }
+}
+
+static RegexNodeCollection getNodesDirectlyReachableFrom(RegexNodeSet* nodes, RegexNodeRef from) {
+    bool nodes_reachable[nodes->node_count];
+    int num_nodes = recursiveNodeReachabilitySearch(nodes, from, nodes_reachable);
+    RegexNodeCollection ret = {
+        .nodes = (RegexNodeRef*)malloc(sizeof(RegexNodeRef) * num_nodes),
+        .num_nodes = num_nodes,
+        .id = 0,
+    };
+    for(int i = 0, j = 0; i < nodes->node_count; i++) {
+        if(nodes_reachable[i]) {
+            ret.nodes[j] = i;
+            j++;
+        }
+    }
+    return ret;
+}
+
+typedef struct {
+    RegexStateTransition (*regex)[256];
+    int count;
+    int capacity;
+} RegexStateList;
+#define REGEX_STATE_LIST_INIT { .regex = NULL, .count = 0, .capacity = 0 }
+
+static void pushToRegexStateList(RegexStateList* list, RegexStateTransition val[256]) {
+    if(list->capacity == list->count) {
+        if(list->capacity == 0) {
+            list->capacity = 4;
+        } else {
+            list->capacity *= 2;
+        }
+        list->regex = (RegexStateTransition (*)[256])realloc(list->regex, sizeof(RegexStateTransition[256]) * list->capacity);
+    }
+    memcpy(list->regex[list->count], val, 256 * sizeof(RegexStateTransition));
+    list->count++;
+}
+
+static Regex compileRegexToStateMachine(RegexNodeSet* nodes, RegexNodeRef start) {
+    RegexNodeCollectionQueue to_resolve = REGEX_NODE_COLLECTION_QUEUE_INIT;
+    RegexNodeCollectionQueue resolved = REGEX_NODE_COLLECTION_QUEUE_INIT;
+    pushToNodeQueue(&to_resolve, getNodesDirectlyReachableFrom(nodes, start));
+    RegexStateList ret = REGEX_STATE_LIST_INIT;
+    int total_count = 1;
+    while(to_resolve.node_count > 0) {
+        RegexNodeCollection col = popFromNodeQueue(&to_resolve);
+
+    }
+    return ret.regex;
 }
 
 Regex compileMatchingRegex(const char* regex_string) {
@@ -428,7 +555,7 @@ Regex compileMatchingRegex(const char* regex_string) {
         return NULL;
     } else {
         nodes.nodes[last_node].exit_num = 0;
-        Regex ret = compileRegexToStateMashine(&nodes, start_ref);
+        Regex ret = compileRegexToStateMachine(&nodes, start_ref);
         freeNodes(&nodes);
         return ret;
     }
