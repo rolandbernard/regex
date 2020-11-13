@@ -122,18 +122,53 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
             break;
         }
         case '|': {
-            RegexNode node = REGEX_NODE_INIT;
-            RegexNodeRef node_ref = pushNodeToRegexNodeSet(nodes, node);
+            /* 
+             * last_node    current_node
+             *         v    v
+             *      1->O-??-O--2.
+             *     /             V    
+             *    O--->O-??-O--->O
+             *     \            .^ 
+             *      3->O-??-O--4      
+             */
+            RegexNode exit_node = REGEX_NODE_INIT;
+            RegexNodeRef exit_node_ref = pushNodeToRegexNodeSet(nodes, exit_node);
+            // 1
+            RegexNodeRef new_start_ref = pushNodeToRegexNodeSet(nodes, nodes->nodes[start]);
+            RegexNode start_replacement = REGEX_NODE_INIT;
+            RegexConnection start_connection = {
+                .class = NULL,
+                .class_len = 0,
+                .next_node = new_start_ref,
+            };
+            pushConnectionToRegexNode(&start_replacement, start_connection);
+            nodes->nodes[start] = start_replacement;
+            // 2
+            RegexConnection end_connection = {
+                .class = NULL,
+                .class_len = 0,
+                .next_node = exit_node_ref,
+            };
+            pushConnectionToRegexNode(&nodes->nodes[current_node], end_connection);
             while(*regex == '|') {
+                // 3
+                RegexNodeRef or_start_node_ref = pushNodeToRegexNodeSet(nodes, exit_node);
+                RegexConnection connection = {
+                    .class = NULL,
+                    .class_len = 0,
+                    .next_node = or_start_node_ref,
+                };
+                pushConnectionToRegexNode(&nodes->nodes[start], connection);
                 regex++;
-                RegexNodeRef end_node = parseRegexGroup(nodes, start, regex, &regex, true);
+                RegexNodeRef end_node = parseRegexGroup(nodes, or_start_node_ref, regex, &regex, true);
                 if(end_node == -1) {
                     return -1;
                 } else {
+                    // 4
                     RegexConnection connection = {
                         .class = NULL,
                         .class_len = 0,
-                        .next_node = node_ref,
+                        .next_node = exit_node_ref,
                     };
                     pushConnectionToRegexNode(&nodes->nodes[end_node], connection);
                 }
@@ -141,8 +176,8 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
             if(*regex != 0 && *regex != ')') {
                 return -1;
             } else {
-                last_node = current_node;
-                current_node = node_ref;
+                last_node = start;
+                current_node = exit_node_ref;
             }
             break;
         }
@@ -151,12 +186,29 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
                 return -1;
             } else {
                 regex++;
-                RegexConnection connection = {
+                /* 
+                 * last_node    current_node
+                 *         v    v
+                 *    O-1->O-??-O
+                 *     \___2___-^       
+                 */
+                // 1
+                RegexNodeRef new_last_ref = pushNodeToRegexNodeSet(nodes, nodes->nodes[last_node]);
+                RegexNode last_node_replacement = REGEX_NODE_INIT;
+                RegexConnection start_connection = {
+                    .class = NULL,
+                    .class_len = 0,
+                    .next_node = new_last_ref,
+                };
+                pushConnectionToRegexNode(&last_node_replacement, start_connection);
+                nodes->nodes[last_node] = last_node_replacement;
+                // 2
+                RegexConnection skip_connection = {
                     .class = NULL,
                     .class_len = 0,
                     .next_node = current_node,
                 };
-                pushConnectionToRegexNode(&nodes->nodes[last_node], connection);
+                pushConnectionToRegexNode(&nodes->nodes[last_node], skip_connection);
             }
             break;
         }
@@ -165,18 +217,47 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
                 return -1;
             } else {
                 regex++;
-                RegexConnection connection_skip = {
+                /* 
+                 * last_node    current_node
+                 *         v    v
+                 *    O-1->O-??-O-2->O
+                 *     \   ^-_4_/   -^
+                 *      \____3_____/       
+                 */
+                // 1
+                RegexNodeRef new_last_ref = pushNodeToRegexNodeSet(nodes, nodes->nodes[last_node]);
+                RegexNode last_node_replacement = REGEX_NODE_INIT;
+                RegexConnection start_connection = {
                     .class = NULL,
                     .class_len = 0,
-                    .next_node = current_node,
+                    .next_node = new_last_ref,
                 };
-                pushConnectionToRegexNode(&nodes->nodes[last_node], connection_skip);
-                RegexConnection connection_repeat = {
+                pushConnectionToRegexNode(&last_node_replacement, start_connection);
+                nodes->nodes[last_node] = last_node_replacement;
+                // 2
+                RegexNode exit_node = REGEX_NODE_INIT;
+                RegexNodeRef exit_node_ref = pushNodeToRegexNodeSet(nodes, exit_node);
+                RegexConnection end_connection = {
                     .class = NULL,
                     .class_len = 0,
-                    .next_node = last_node,
+                    .next_node = exit_node_ref,
                 };
-                pushConnectionToRegexNode(&nodes->nodes[current_node], connection_repeat);
+                pushConnectionToRegexNode(&nodes->nodes[current_node], end_connection);
+                // 3
+                RegexConnection skip_connection = {
+                    .class = NULL,
+                    .class_len = 0,
+                    .next_node = exit_node_ref,
+                };
+                pushConnectionToRegexNode(&nodes->nodes[last_node], skip_connection);
+                // 4
+                RegexConnection repeat_connection = {
+                    .class = NULL,
+                    .class_len = 0,
+                    .next_node = new_last_ref,
+                };
+                pushConnectionToRegexNode(&nodes->nodes[current_node], repeat_connection);
+                current_node = exit_node_ref;
             }
             break;
         }
@@ -185,12 +266,39 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
                 return -1;
             } else {
                 regex++;
-                RegexConnection connection_repeat = {
+                /* 
+                 * last_node    current_node
+                 *         v    v
+                 *    O-1->O-??-O-2->O
+                 *         ^-_3_/
+                 */
+                // 1
+                RegexNodeRef new_last_ref = pushNodeToRegexNodeSet(nodes, nodes->nodes[last_node]);
+                RegexNode last_node_replacement = REGEX_NODE_INIT;
+                RegexConnection start_connection = {
                     .class = NULL,
                     .class_len = 0,
-                    .next_node = last_node,
+                    .next_node = new_last_ref,
                 };
-                pushConnectionToRegexNode(&nodes->nodes[current_node], connection_repeat);
+                pushConnectionToRegexNode(&last_node_replacement, start_connection);
+                nodes->nodes[last_node] = last_node_replacement;
+                // 2
+                RegexNode exit_node = REGEX_NODE_INIT;
+                RegexNodeRef exit_node_ref = pushNodeToRegexNodeSet(nodes, exit_node);
+                RegexConnection end_connection = {
+                    .class = NULL,
+                    .class_len = 0,
+                    .next_node = exit_node_ref,
+                };
+                pushConnectionToRegexNode(&nodes->nodes[current_node], end_connection);
+                // 3
+                RegexConnection repeat_connection = {
+                    .class = NULL,
+                    .class_len = 0,
+                    .next_node = new_last_ref,
+                };
+                pushConnectionToRegexNode(&nodes->nodes[current_node], repeat_connection);
+                current_node = exit_node_ref;
             }
             break;
         }
@@ -235,18 +343,45 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
                     return -1;
                 } else {
                     regex++;
+                    /* 
+                     * last_node    current_node
+                     *         v    v
+                     *    O-1->O-??-O--->O-??->O--->O-??->O-2->O
+                     *                              ^-_3_/
+                     */
+                    // 1
+                    RegexNodeRef new_last_ref = pushNodeToRegexNodeSet(nodes, nodes->nodes[last_node]);
+                    RegexNode last_node_replacement = REGEX_NODE_INIT;
+                    RegexConnection start_connection = {
+                        .class = NULL,
+                        .class_len = 0,
+                        .next_node = new_last_ref,
+                    };
+                    pushConnectionToRegexNode(&last_node_replacement, start_connection);
+                    nodes->nodes[last_node] = last_node_replacement;
                     for(int i = 1; i < min; i++) {
                         RegexNodeRef new_end = cloneLastNodes(nodes, last_node, current_node);
                         last_node = current_node;
                         current_node = new_end;
                     }
                     if(max == -1) {
-                        RegexConnection connection_repeat = {
+                        // 2
+                        RegexNode exit_node = REGEX_NODE_INIT;
+                        RegexNodeRef exit_node_ref = pushNodeToRegexNodeSet(nodes, exit_node);
+                        RegexConnection end_connection = {
+                            .class = NULL,
+                            .class_len = 0,
+                            .next_node = exit_node_ref,
+                        };
+                        pushConnectionToRegexNode(&nodes->nodes[current_node], end_connection);
+                        // 3
+                        RegexConnection repeat_connection = {
                             .class = NULL,
                             .class_len = 0,
                             .next_node = last_node,
                         };
-                        pushConnectionToRegexNode(&nodes->nodes[current_node], connection_repeat);
+                        pushConnectionToRegexNode(&nodes->nodes[current_node], repeat_connection);
+                        current_node = exit_node_ref;
                     } else if(max != min) {
                         RegexNodeRef new_end = cloneLastNodes(nodes, last_node, current_node);
                         last_node = current_node;
