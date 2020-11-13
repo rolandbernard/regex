@@ -4,8 +4,8 @@
 #include <stdbool.h>
 
 typedef enum {
+    REGEX_STATE_DEADEND = 0,
     REGEX_STATE_NEXT,
-    REGEX_STATE_DEADEND,
     REGEX_STATE_END,
 } RegexStateTransitionType;
 
