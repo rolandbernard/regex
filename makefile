@@ -3,6 +3,7 @@ BDIR=./build/bin
 
 IDIR=./src
 SDIR=./src
+TDIR=./test
 
 CC=gcc
 LINK=gcc
@@ -10,10 +11,10 @@ DFLAGS=-g -O0 -fsanitize=address,leak,undefined
 RFLAGS=-O3
 CFLAGS=-I$(IDIR) -Wall $(DFLAGS)
 
-_SRC=$(wildcard $(SDIR)/*/*.c) $(wildcard $(SDIR)/*.c)
+_SRC=$(wildcard $(TDIR)/*.c) $(wildcard $(SDIR)/*.c)
 OBJ=$(patsubst $(SDIR)/%.c,$(ODIR)/%.o,$(_SRC))
 
-DEPS=$(wildcard $(IDIR)/*/*.h) $(wildcard $(IDIR)/*.h)
+DEPS=$(wildcard $(TDIR)/*.h) $(wildcard $(IDIR)/*.h)
 
 _BIN=test
 BIN=$(patsubst %,$(BDIR)/%,$(_BIN))

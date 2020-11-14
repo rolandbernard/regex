@@ -1,9 +1,9 @@
 
 #include "regex.h"
-#include "test/test.h"
+#include "test.h"
         
 TestResult compiling_a_valid_regex_returns_non_null() {
-    const char* examples[] = { "(qe)?*d+", "test", "ab*c", "d(e?f)*", "(qe)?*d+", "(a?b+){3}", "(a?b+c){1,4}", "(x?yz){3,}" };
+    const char* examples[] = {"test", "ab*c", "d(e?f)*", "(qe)?*d+", "(a?b+){3}", "(a?b+c){1,4}", "(x?yz){3,}", "((a+b)+c|cb|de|cd)+" };
     for(int e = 0; e < LEN(examples); e++) {
         Regex regex = compileMatchingRegex(examples[e]);
         ASSERT(regex != NULL);
@@ -46,11 +46,65 @@ TestResult simple_strings_dont_match_other_strings() {
     return SUCCESS;
 }
 
+TestResult using_the_pipe_matches_one_of_the_options() {
+    const char* examples[] = { "a|b", "a|b|c|d|e", "a|bc|def|ghijk" };
+    const char* example_match[][6] = {
+        { "a", "b", NULL },
+        { "a", "b", "c", "d", "e", NULL },
+        { "a", "bc", "def", "ghijk", NULL },
+    };
+    for(int e = 0; e < LEN(examples); e++) {
+        Regex regex = compileMatchingRegex(examples[e]);
+        for(int m = 0; example_match[e][m] != NULL; m++) {
+            ASSERT(matchRegex(regex, example_match[e][m], NULL));
+        }
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+
+TestResult using_the_pipe_doesnt_match_a_string_not_in_the_options() {
+    const char* examples[] = { "a|b", "a|b|c|d|e", "a|bc|def|ghijk" };
+    const char* example_match[][6] = {
+        { "ab", "c", NULL },
+        { "ab", "ab", "cd", "df", "g", NULL },
+        { "b", "c", "df", "ghij", NULL },
+    };
+    for(int e = 0; e < LEN(examples); e++) {
+        Regex regex = compileMatchingRegex(examples[e]);
+        for(int m = 0; example_match[e][m] != NULL; m++) {
+            ASSERT(!matchRegex(regex, example_match[e][m], NULL));
+        }
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+
+TestResult using_the_star_matches_zero_or_more_of_the_previous_group() {
+    const char* examples[] = { "a*", "(ab)*", "(abc)*" };
+    const char* example_match[][6] = {
+        { "", "aa", "aaa", "aaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", NULL },
+        { "", "abababab", "ab", "ababababab", "ababab", NULL },
+        { "", "abc", "abcabc", "abcabcabcabcabc", NULL },
+    };
+    for(int e = 0; e < LEN(examples); e++) {
+        Regex regex = compileMatchingRegex(examples[e]);
+        for(int m = 0; example_match[e][m] != NULL; m++) {
+            ASSERT(matchRegex(regex, example_match[e][m], NULL));
+        }
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+
 static Test tests[] = {
     TEST(compiling_a_valid_regex_returns_non_null),
     TEST(compiling_a_invalid_regex_returns_null),
     TEST(simple_strings_match_themselfs),
     TEST(simple_strings_dont_match_other_strings),
+    TEST(using_the_pipe_matches_one_of_the_options),
+    TEST(using_the_pipe_doesnt_match_a_string_not_in_the_options),
+    TEST(using_the_star_matches_zero_or_more_of_the_previous_group),
 };
 
 int main() {
