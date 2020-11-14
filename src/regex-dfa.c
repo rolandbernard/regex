@@ -5,14 +5,15 @@
 #include "regex-dfa.h"
 
 static void resolveCharacterClass(const char* class_str, int len, bool output[256]) {
+    output[0] = false;
     if (len == 1) {
         if(class_str[0] == '.') {
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = true;
             }
             output['\n'] = false;
         } else {
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = false;
             }
             if(class_str[0] == '$') {
@@ -28,7 +29,7 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
             inverted = true;
             i++;
         }
-        for(int c = 0; c < 256; c++) {
+        for(int c = 1; c < 256; c++) {
             output[c] = inverted;
         }
         for(; i < len - 1; i++) {
@@ -37,126 +38,126 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
                 i++;
                 switch (class_str[i]) {
                 case 'w':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(isalnum(c) || c == '_') {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'W':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!(isalnum(c) || c == '_')) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'd':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(isdigit(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'D':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!isdigit(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 's':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(isspace(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'S':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!isspace(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'p':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(isprint(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'P':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!isprint(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'g':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(isgraph(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'G':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!isgraph(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'l':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(islower(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'L':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!islower(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'u':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(isupper(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'U':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!isupper(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'x':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(isxdigit(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'X':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!isxdigit(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'a':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(isalpha(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'A':
-                    for (int c = 0; c < 256; c++) {
+                    for (int c = 1; c < 256; c++) {
                         if(!isalpha(c)) {
                             output[c] = !inverted;
                         }
@@ -188,9 +189,9 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
                     case 'f':
                         c = '\f';
                         break;
-                    case '0':
-                        c = '\0';
-                        break;
+                    // case '0': // Strings are null terminated
+                    //     output['\0'] = true;
+                    //     break;
                     default: {
                         c = class_str[i];
                         break;
@@ -233,9 +234,9 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
                     case 'f':
                         c = '\f';
                         break;
-                    case '0':
-                        c = '\0';
-                        break;
+                    // case '0': // Strings are null terminated
+                    //     output['\0'] = true;
+                    //     break;
                     default: {
                         c = class_str[i];
                         break;
@@ -252,97 +253,97 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
     } else if (class_str[0] == '\\') {
         switch (class_str[1]) {
         case 'w':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = isalnum(c) || c == '_';
             }
             break;
         case 'W':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !(isalnum(c) || c == '_');
             }
             break;
         case 'd':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = isdigit(c);
             }
             break;
         case 'D':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !isdigit(c);
             }
             break;
         case 's':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = isspace(c);
             }
             break;
         case 'S':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !isspace(c);
             }
             break;
         case 'p':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = isprint(c);
             }
             break;
         case 'P':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !isprint(c);
             }
             break;
         case 'g':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = isgraph(c);
             }
             break;
         case 'G':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !isgraph(c);
             }
             break;
         case 'l':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = islower(c);
             }
             break;
         case 'L':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !islower(c);
             }
             break;
         case 'u':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = isupper(c);
             }
             break;
         case 'U':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !isupper(c);
             }
             break;
         case 'x':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = isxdigit(c);
             }
             break;
         case 'X':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !isxdigit(c);
             }
             break;
         case 'a':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = isalpha(c);
             }
             break;
         case 'A':
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = !isalpha(c);
             }
             break;
         default: {
-            for(int c = 0; c < 256; c++) {
+            for(int c = 1; c < 256; c++) {
                 output[c] = false;
             }
             switch (class_str[1]) {
@@ -370,9 +371,9 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
                 case 'f':
                     output['\f'] = true;
                     break;
-                case '0':
-                    output['\0'] = true;
-                    break;
+                // case '0': // Strings are null terminated
+                //     output['\0'] = true;
+                //     break;
                 default: {
                     output[(unsigned char)class_str[1]] = true;
                     break;
