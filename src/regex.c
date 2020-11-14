@@ -62,22 +62,29 @@ static void freeNodes(RegexNodeSet* node_set) {
     free(node_set->nodes);
 }
 
-static RegexNodeRef cloneLastNodes(RegexNodeSet* nodes, RegexNodeRef start, RegexNodeRef end) {
-    RegexNodeRef last_node = nodes->node_count - 1;
-    for(int n = start; n < last_node; n++) {
-        RegexNode node = REGEX_NODE_INIT;
-        pushNodeToRegexNodeSet(nodes, node);
-    }
-    for(int n = start; n <= last_node; n++) {
-        for(int c = 0; c < nodes->nodes[n].connection_count; c++) {
-            RegexConnection connection = nodes->nodes[n].connections[c];
-            if(connection.next_node >= start && connection.next_node <= last_node) {
-                connection.next_node += last_node - start;
-                pushConnectionToRegexNode(&nodes->nodes[n + (last_node - start)], connection);
+static void recursiveNodeCopy(RegexNodeSet* nodes, RegexNodeRef node, RegexNodeRef* new_nodes, RegexNodeRef offset, RegexNodeRef max) {
+    for (int c = 0; c < nodes->nodes[node].connection_count; c++) {
+        RegexConnection connection = nodes->nodes[node].connections[c];
+        if (connection.next_node >= offset && connection.next_node < max) {
+            if (new_nodes[connection.next_node - offset] == -1) {
+                RegexNode node = REGEX_NODE_INIT;
+                new_nodes[connection.next_node - offset] = pushNodeToRegexNodeSet(nodes, node);
+                recursiveNodeCopy(nodes, connection.next_node, new_nodes, offset, max);
             }
+            connection.next_node = new_nodes[connection.next_node - offset];
+            pushConnectionToRegexNode(&nodes->nodes[new_nodes[node - offset]], connection);
         }
     }
-    return end + (last_node - start);
+}
+
+static RegexNodeRef cloneLastNodes(RegexNodeSet* nodes, RegexNodeRef start, RegexNodeRef end) {
+    RegexNodeRef new_nodes[nodes->node_count - start];
+    for(int i = 0; i < nodes->node_count - start; i++) {
+        new_nodes[i] = -1;
+    }
+    new_nodes[0] = end;
+    recursiveNodeCopy(nodes, start, new_nodes, start, nodes->node_count);
+    return new_nodes[end - start];
 }
 
 static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char* regex, const char** end_pos, bool inside_or) {
@@ -343,6 +350,9 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
                 if(*regex != '}' || (max != -1 && max < min)) {
                     return -1;
                 } else {
+                    if(min == 0 && max == 0) {
+                        return -1;
+                    }
                     regex++;
                     /* 
                      * last_node    current_node
@@ -366,27 +376,75 @@ static RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, con
                         current_node = new_end;
                     }
                     if(max == -1) {
-                        // 2
-                        RegexNode exit_node = REGEX_NODE_INIT;
-                        RegexNodeRef exit_node_ref = pushNodeToRegexNodeSet(nodes, exit_node);
-                        RegexConnection end_connection = {
-                            .class = NULL,
-                            .class_len = 0,
-                            .next_node = exit_node_ref,
-                        };
-                        pushConnectionToRegexNode(&nodes->nodes[current_node], end_connection);
-                        // 3
-                        RegexConnection repeat_connection = {
-                            .class = NULL,
-                            .class_len = 0,
-                            .next_node = last_node,
-                        };
-                        pushConnectionToRegexNode(&nodes->nodes[current_node], repeat_connection);
-                        current_node = exit_node_ref;
+                        if(min == 0) {
+                            // like *
+                            RegexNodeRef new_last_ref = pushNodeToRegexNodeSet(nodes, nodes->nodes[last_node]);
+                            RegexNode last_node_replacement = REGEX_NODE_INIT;
+                            RegexConnection start_connection = {
+                                .class = NULL,
+                                .class_len = 0,
+                                .next_node = new_last_ref,
+                            };
+                            pushConnectionToRegexNode(&last_node_replacement, start_connection);
+                            nodes->nodes[last_node] = last_node_replacement;
+                            // 2
+                            RegexNode exit_node = REGEX_NODE_INIT;
+                            RegexNodeRef exit_node_ref = pushNodeToRegexNodeSet(nodes, exit_node);
+                            RegexConnection end_connection = {
+                                .class = NULL,
+                                .class_len = 0,
+                                .next_node = exit_node_ref,
+                            };
+                            pushConnectionToRegexNode(&nodes->nodes[current_node], end_connection);
+                            RegexConnection skip_connection = {
+                                .class = NULL,
+                                .class_len = 0,
+                                .next_node = exit_node_ref,
+                            };
+                            pushConnectionToRegexNode(&nodes->nodes[last_node], skip_connection);
+                            // 3
+                            RegexConnection repeat_connection = {
+                                .class = NULL,
+                                .class_len = 0,
+                                .next_node = new_last_ref,
+                            };
+                            pushConnectionToRegexNode(&nodes->nodes[current_node], repeat_connection);
+                            current_node = exit_node_ref;
+                        } else {
+                            // like +
+                            RegexNodeRef new_last_ref = pushNodeToRegexNodeSet(nodes, nodes->nodes[last_node]);
+                            RegexNode last_node_replacement = REGEX_NODE_INIT;
+                            RegexConnection start_connection = {
+                                .class = NULL,
+                                .class_len = 0,
+                                .next_node = new_last_ref,
+                            };
+                            pushConnectionToRegexNode(&last_node_replacement, start_connection);
+                            nodes->nodes[last_node] = last_node_replacement;
+                            // 2
+                            RegexNode exit_node = REGEX_NODE_INIT;
+                            RegexNodeRef exit_node_ref = pushNodeToRegexNodeSet(nodes, exit_node);
+                            RegexConnection end_connection = {
+                                .class = NULL,
+                                .class_len = 0,
+                                .next_node = exit_node_ref,
+                            };
+                            pushConnectionToRegexNode(&nodes->nodes[current_node], end_connection);
+                            // 3
+                            RegexConnection repeat_connection = {
+                                .class = NULL,
+                                .class_len = 0,
+                                .next_node = new_last_ref,
+                            };
+                            pushConnectionToRegexNode(&nodes->nodes[current_node], repeat_connection);
+                            current_node = exit_node_ref;
+                        }
                     } else if(max != min) {
-                        RegexNodeRef new_end = cloneLastNodes(nodes, last_node, current_node);
-                        last_node = current_node;
-                        current_node = new_end;
+                        if(min != 0) {
+                            RegexNodeRef new_end = cloneLastNodes(nodes, last_node, current_node);
+                            last_node = current_node;
+                            current_node = new_end;
+                        }
                         RegexConnection connection = {
                             .class = NULL,
                             .class_len = 0,
@@ -598,7 +656,7 @@ static bool isContainedInQueue(RegexNodeCollectionQueue* queue, RegexNodeCollect
                     equal = false;
                 }
             }
-            if(equal) {
+            if(equal && queue->nodes[i].exit_num == col.exit_num) {
                 *id = queue->nodes[i].id;
                 return true;
             }
@@ -703,63 +761,74 @@ static Regex compileRegexToStateMachine(RegexNodeSet* nodes, RegexNodeRef start)
                 }
             }
         }
-        int connection_dests[num_connections];
-        bool connection_class[num_connections][256];
-        int index = 0;
-        for(int n = 0; n < col.num_nodes; n++) {
-            RegexNode node = nodes->nodes[col.nodes[n]];
-            for(int c = 0; c < node.connection_count; c++) {
-                if(node.connections[c].class != NULL) {
-                    resolveCharacterClass(node.connections[c].class, node.connections[c].class_len, connection_class[index]);
-                    connection_dests[index] = node.connections[c].next_node;
-                    index++;
+        if(num_connections != 0) {
+            int connection_dests[num_connections];
+            bool connection_class[num_connections][256];
+            int index = 0;
+            for (int n = 0; n < col.num_nodes; n++) {
+                RegexNode node = nodes->nodes[col.nodes[n]];
+                for (int c = 0; c < node.connection_count; c++) {
+                    if (node.connections[c].class != NULL) {
+                        resolveCharacterClass(node.connections[c].class, node.connections[c].class_len, connection_class[index]);
+                        connection_dests[index] = node.connections[c].next_node;
+                        index++;
+                    }
                 }
             }
-        }
-        int start_index = 0;
-        int end_index = 1;
-        while(start_index < 256) {
-            if(end_index < 256 && areLinesEqual(connection_class, start_index, end_index, num_connections)) {
-                end_index++;
-            } else {
-                int num_dests = 0;
-                for(int i = 0; i < num_connections; i++) {
-                    if(connection_class[i][start_index]) {
-                        num_dests++;
-                    }
-                }
-                if(num_dests > 0) {
-                    RegexNodeRef dests[num_dests];
-                    index = 0;
-                    for(int i = 0; i < num_connections; i++) {
-                        if(connection_class[i][start_index]) {
-                            dests[index] = connection_dests[i];
-                            index++;
+            int start_index = 0;
+            int end_index = 1;
+            while (start_index < 256) {
+                if (end_index < 256 && areLinesEqual(connection_class, start_index, end_index, num_connections)) {
+                    end_index++;
+                } else {
+                    int num_dests = 0;
+                    for (int i = 0; i < num_connections; i++) {
+                        if (connection_class[i][start_index]) {
+                            num_dests++;
                         }
                     }
-                    RegexNodeCollection dest_nodes = getNodesDirectlyReachableFrom(nodes, dests, num_dests);
-                    int next_node;
-                    if(!isContainedInQueue(&to_resolve, dest_nodes, &next_node)) {
-                        dest_nodes.id = ret.count;
-                        next_node = dest_nodes.id;
-                        pushToRegexStateList(&ret);
-                        pushToNodeQueue(&to_resolve, dest_nodes);
+                    if (num_dests > 0) {
+                        RegexNodeRef dests[num_dests];
+                        index = 0;
+                        for (int i = 0; i < num_connections; i++) {
+                            if (connection_class[i][start_index]) {
+                                dests[index] = connection_dests[i];
+                                index++;
+                            }
+                        }
+                        RegexNodeCollection dest_nodes = getNodesDirectlyReachableFrom(nodes, dests, num_dests);
+                        int next_node;
+                        if (!isContainedInQueue(&to_resolve, dest_nodes, &next_node)) {
+                            dest_nodes.id = ret.count;
+                            next_node = dest_nodes.id;
+                            pushToRegexStateList(&ret);
+                            pushToNodeQueue(&to_resolve, dest_nodes);
+                        }
+                        for (int i = start_index; i < end_index; i++) {
+                            ret.regex[col.id][i].state_type = REGEX_STATE_NEXT;
+                            ret.regex[col.id][i].next_state = next_node;
+                        }
+                    } else if (col.exit_num != -1) {
+                        for (int i = start_index; i < end_index; i++) {
+                            ret.regex[col.id][i].state_type = REGEX_STATE_END;
+                            ret.regex[col.id][i].end_point = col.exit_num;
+                        }
                     }
-                    for(int i = start_index; i < end_index; i++) {
-                        ret.regex[col.id][i].state_type = REGEX_STATE_NEXT;
-                        ret.regex[col.id][i].next_state = next_node;
-                    }
-                } else if(col.exit_num != -1) {
-                    for(int i = start_index; i < end_index; i++) {
-                        ret.regex[col.id][i].state_type = REGEX_STATE_END;
-                        ret.regex[col.id][i].end_point = col.exit_num;
-                    }
+                    start_index = end_index;
+                    end_index = start_index + 1;
                 }
-                start_index = end_index;
-                end_index = start_index + 1;
+            }
+        } else if(col.exit_num != -1) {
+            for (int i = 0; i < 256; i++) {
+                ret.regex[col.id][i].state_type = REGEX_STATE_END;
+                ret.regex[col.id][i].end_point = col.exit_num;
             }
         }
     }
+    for(int i = 0; i < to_resolve.node_count; i++) {
+        free(to_resolve.nodes[i].nodes);
+    }
+    free(to_resolve.nodes);
     return (Regex)realloc(ret.regex, sizeof(RegexStateTransition[256]) * ret.count);
 }
 
@@ -775,18 +844,47 @@ Regex compileMatchingRegex(const char* regex_string) {
     } else {
         nodes.nodes[last_node].exit_num = 0;
         // TODO: this is only here for debuging
+        fprintf(stderr, "NFA\n");
         for(int i = 0; i < nodes.node_count; i++) {
+            if(nodes.nodes[i].exit_num != -1) {
+                putc('*', stderr);
+            } else {
+                putc(' ', stderr);
+            }
             fprintf(stderr, "%i: ", i);
             for(int j = 0; j < nodes.nodes[i].connection_count; j++) {
                 if(nodes.nodes[i].connections[j].class == NULL) {
-                    fprintf(stderr, "%i ", nodes.nodes[i].connections[j].next_node);
+                    fprintf(stderr, "%i, ", nodes.nodes[i].connections[j].next_node);
                 } else {
-                    fprintf(stderr, "%c:%i ", nodes.nodes[i].connections[j].class[0], nodes.nodes[i].connections[j].next_node);
+                    fwrite(nodes.nodes[i].connections[j].class, 1, nodes.nodes[i].connections[j].class_len, stderr);
+                    fprintf(stderr, ":%i, ", nodes.nodes[i].connections[j].next_node);
                 }
             }
             fprintf(stderr, "\n");
         }
+        fprintf(stderr, "\n");
         Regex ret = compileRegexToStateMachine(&nodes, start_ref);
+        fprintf(stderr, "DFA\n");
+        int num_states = 1;
+        for(int i = 0; i < num_states; i++) {
+            if(ret[i][255].state_type == REGEX_STATE_END) {
+                putc('*', stderr);
+            } else {
+                putc(' ', stderr);
+            }
+            fprintf(stderr, "%i: ", i);
+            for(int j = 0; j < 256; j++) {
+                if(ret[i][j].state_type == REGEX_STATE_NEXT) {
+                    fprintf(stderr, "%c:%i, ", (char)j, ret[i][j].next_state);
+                    if(ret[i][j].next_state + 1 > num_states) {
+                        num_states = ret[i][j].next_state + 1;
+                    }
+                }
+            }
+            fprintf(stderr, "\n");
+        }
+        fprintf(stderr, "\n");
+        fprintf(stderr, "\n");
         freeNodes(&nodes);
         return ret;
     }
