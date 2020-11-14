@@ -31,6 +31,8 @@ void freeNodes(RegexNodeSet* node_set);
 
 RegexNodeRef pushNodeToRegexNodeSet(RegexNodeSet* node_set, RegexNode node);
 
+void pushConnectionToRegexNode(RegexNode* node, RegexConnection conn);
+
 RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char* regex, const char** end_pos, bool inside_or);
 
 #endif

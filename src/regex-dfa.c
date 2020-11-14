@@ -482,7 +482,9 @@ static RegexNodeCollection getNodesDirectlyReachableFrom(RegexNodeSet* nodes, Re
             j++;
         }
         if(visited[i] && nodes->nodes[i].exit_num != -1) {
-            ret.exit_num = nodes->nodes[i].exit_num;
+            if(ret.exit_num == -1 || nodes->nodes[i].exit_num < ret.exit_num) {
+                ret.exit_num = nodes->nodes[i].exit_num;
+            }
         }
     }
     return ret;

@@ -3,7 +3,7 @@
 
 #include "regex-nfa.h"
 
-static void pushConnectionToRegexNode(RegexNode* node, RegexConnection conn) {
+void pushConnectionToRegexNode(RegexNode* node, RegexConnection conn) {
     if(node->connection_capacity == node->connection_count) {
         if(node->connection_capacity == 0) {
             node->connection_capacity = 4;

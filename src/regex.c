@@ -17,61 +17,39 @@ Regex compileMatchingRegex(const char* regex_string) {
         return NULL;
     } else {
         nodes.nodes[last_node].exit_num = 0;
-        // TODO: this is only here for debuging
-        // fprintf(stderr, "NFA\n");
-        // for(int i = 0; i < nodes.node_count; i++) {
-        //     if(nodes.nodes[i].exit_num != -1) {
-        //         putc('*', stderr);
-        //     } else {
-        //         putc(' ', stderr);
-        //     }
-        //     fprintf(stderr, "%i: ", i);
-        //     for(int j = 0; j < nodes.nodes[i].connection_count; j++) {
-        //         if(nodes.nodes[i].connections[j].class_str == NULL) {
-        //             fprintf(stderr, "%i, ", nodes.nodes[i].connections[j].next_node);
-        //         } else {
-        //             fwrite(nodes.nodes[i].connections[j].class_str, 1, nodes.nodes[i].connections[j].class_len, stderr);
-        //             fprintf(stderr, ":%i, ", nodes.nodes[i].connections[j].next_node);
-        //         }
-        //     }
-        //     fprintf(stderr, "\n");
-        // }
-        // fprintf(stderr, "\n");
         Regex ret = compileRegexToStateMachine(&nodes, start_ref);
-        // fprintf(stderr, "DFA\n");
-        // int num_states = 1;
-        // for(int i = 0; i < num_states; i++) {
-        //     if(ret[i][255].state_type == REGEX_STATE_END) {
-        //         putc('*', stderr);
-        //     } else {
-        //         putc(' ', stderr);
-        //     }
-        //     fprintf(stderr, "%i: ", i);
-        //     for(int j = 0; j < 256; j++) {
-        //         if (ret[i][j].state_type == REGEX_STATE_NEXT) {
-        //             if (isgraph(j) || j == ' ') {
-        //                 fprintf(stderr, "%c:%i, ", (char)j, ret[i][j].next_state);
-        //             }
-        //             if (ret[i][j].next_state + 1 > num_states) {
-        //                 num_states = ret[i][j].next_state + 1;
-        //             }
-        //         }
-        //     }
-        //     fprintf(stderr, "\n");
-        // }
-        // fprintf(stderr, "\n");
-        // fprintf(stderr, "\n");
         freeNodes(&nodes);
         return ret;
     }
 }
 
 Regex compileMultiMatchingRegex(int num_regex, const char* const* regex_strings) {
-    return NULL;
+    RegexNodeSet nodes = REGEX_NODE_SET_INIT;
+    RegexNode empty_node = REGEX_NODE_INIT;
+    RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, empty_node);
+    for(int i = 0; i < num_regex; i++) {
+        RegexNodeRef regex_start_ref = pushNodeToRegexNodeSet(&nodes, empty_node);
+        RegexConnection connection = {
+            .class_str = NULL,
+            .class_len = 0,
+            .next_node = regex_start_ref,
+        };
+        pushConnectionToRegexNode(&nodes.nodes[start_ref], connection);
+        const char* end_pos;
+        RegexNodeRef last_node = parseRegexGroup(&nodes, regex_start_ref, regex_strings[i], &end_pos, false);
+        if(last_node < 0 || *end_pos != 0) {
+            freeNodes(&nodes);
+            return NULL;
+        } else {
+            nodes.nodes[last_node].exit_num = i;
+        }
+    }
+    Regex ret = compileRegexToStateMachine(&nodes, start_ref);
+    freeNodes(&nodes);
+    return ret;
 }
 
 bool startsWithRegex(Regex regex, const char* string, int* len_out, int* exit_num) {
-    return false;
     int last_len = -1;
     int last_exit = -1;
     int state = 0;
@@ -79,15 +57,15 @@ bool startsWithRegex(Regex regex, const char* string, int* len_out, int* exit_nu
         RegexStateTransition transition = regex[state][(unsigned char)*string];
         switch (transition.state_type) {
         case REGEX_STATE_DEADEND:
+            if(len_out != NULL) {
+                *len_out = last_len;
+            }
+            if(exit_num != NULL) {
+                *exit_num = last_exit;
+            }
             if(len == -1) {
                 return false;
             } else {
-                if(len_out != NULL) {
-                    *len_out = last_len;
-                }
-                if(exit_num != NULL) {
-                    *exit_num = last_exit;
-                }
                 return true;
             }
             break;
@@ -117,6 +95,9 @@ bool matchRegex(Regex regex, const char* string, int* exit_num) {
         RegexStateTransition transition = regex[state][(unsigned char)*string];
         switch (transition.state_type) {
         case REGEX_STATE_DEADEND:
+            if(exit_num != NULL) {
+                *exit_num = -1;
+            }
             return false;
             break;
         case REGEX_STATE_NEXT:
@@ -129,6 +110,9 @@ bool matchRegex(Regex regex, const char* string, int* exit_num) {
                 }
                 return true;
             } else {
+                if(exit_num != NULL) {
+                    *exit_num = -1;
+                }
                 return false;
             }
             break;
