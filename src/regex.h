@@ -3,21 +3,7 @@
 
 #include <stdbool.h>
 
-typedef enum {
-    REGEX_STATE_DEADEND = 0,
-    REGEX_STATE_NEXT,
-    REGEX_STATE_END,
-} RegexStateTransitionType;
-
-typedef struct {
-    RegexStateTransitionType state_type;
-    union {
-        int next_state;
-        int end_point;
-    };
-} RegexStateTransition;
-
-typedef RegexStateTransition (*Regex)[256];
+#include "regex-type.h"
 
 Regex compileMatchingRegex(const char* regex_string);
 
