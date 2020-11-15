@@ -54,7 +54,7 @@ bool startsWithRegex(Regex regex, const char* string, int* len_out, int* exit_nu
     int last_exit = -1;
     int state = 0;
     for(int len = 0;;string++, len++) {
-        RegexStateTransition transition = regex[state][(unsigned char)*string];
+        RegexStateTransition transition = regex->states[state][(unsigned char)*string];
         switch (transition.state_type) {
         case REGEX_STATE_DEADEND:
             if(len_out != NULL) {
@@ -70,9 +70,9 @@ bool startsWithRegex(Regex regex, const char* string, int* len_out, int* exit_nu
             }
             break;
         case REGEX_STATE_NEXT:
-            if(regex[state][0].state_type == REGEX_STATE_END) {
+            if(regex->states[state][0].state_type == REGEX_STATE_END) {
                 last_len = len;
-                last_exit = regex[state][0].end_point;
+                last_exit = regex->states[state][0].end_point;
             }
             state = transition.next_state;
             break;
@@ -92,7 +92,7 @@ bool startsWithRegex(Regex regex, const char* string, int* len_out, int* exit_nu
 bool matchRegex(Regex regex, const char* string, int* exit_num) {
     int state = 0;
     for(;;string++) {
-        RegexStateTransition transition = regex[state][(unsigned char)*string];
+        RegexStateTransition transition = regex->states[state][(unsigned char)*string];
         switch (transition.state_type) {
         case REGEX_STATE_DEADEND:
             if(exit_num != NULL) {

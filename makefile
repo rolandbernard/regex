@@ -11,8 +11,10 @@ DFLAGS=-g -O0 -fsanitize=address,leak,undefined
 RFLAGS=-O3
 CFLAGS=-I$(IDIR) -Wall $(DFLAGS)
 
-_SRC=$(wildcard $(TDIR)/*.c) $(wildcard $(SDIR)/*.c)
+_SRC=$(wildcard $(SDIR)/*/*.c) $(wildcard $(SDIR)/*.c)
 OBJ=$(patsubst $(SDIR)/%.c,$(ODIR)/%.o,$(_SRC))
+
+TEST=$(wildcard $(TDIR)/*.c)
 
 DEPS=$(wildcard $(TDIR)/*.h) $(wildcard $(IDIR)/*.h)
 
@@ -22,7 +24,7 @@ BIN=$(patsubst %,$(BDIR)/%,$(_BIN))
 .PHONY: all
 all: $(BIN)
 
-$(BDIR)/test: $(OBJ)
+$(BDIR)/test: $(OBJ) $(TEST)
 	mkdir -p `dirname $@`
 	$(LINK) $(CFLAGS) -o $@ $^ $(LIBS)
 

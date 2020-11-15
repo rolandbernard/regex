@@ -1,6 +1,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <stddef.h>
 
 #include "regex-dfa.h"
 
@@ -605,5 +606,9 @@ Regex compileRegexToStateMachine(RegexNodeSet* nodes, RegexNodeRef start) {
         free(to_resolve.nodes[i].nodes);
     }
     free(to_resolve.nodes);
-    return (Regex)realloc(ret.regex, sizeof(RegexStateTransition[256]) * ret.count);
+    Regex return_regex = (Regex)malloc(sizeof(RegexTransitionTable) + ret.count * sizeof(RegexStateTransition[256]));
+    return_regex->num_states = ret.count;
+    memcpy(return_regex->states, ret.regex, ret.count * sizeof(RegexStateTransition[256]));
+    free(ret.regex);
+    return return_regex;
 }
