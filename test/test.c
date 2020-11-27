@@ -456,6 +456,104 @@ TestResult starts_with_regex_returns_the_first_exit_taken_or_negative_one() {
     return SUCCESS;
 }
 
+TestResult strings_match_themselfs() {
+    const char* examples[] = { "te?s+t*", "[abc]", "d{2}ef", "q+ed*[abc]*" };
+    for(int e = 0; e < LEN(examples); e++) {
+        Regex regex = compileMatchingString(examples[e]);
+        ASSERT_EX(matchRegex(regex, examples[e], NULL), e);
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+
+TestResult strings_dont_match_other_strings() {
+    const char* examples[] = { "te?s+t*", "[abc]", "d{2}ef", "q+ed*[abc]*" };
+    for(int e = 0; e < LEN(examples); e++) {
+        Regex regex = compileMatchingString(examples[e]);
+        for(int m = 0; m < LEN(examples); m++) {
+            if(m != e) {
+                ASSERT_EX_MA(!matchRegex(regex, examples[m], NULL), e, m);
+            }
+        }
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+
+TestResult string_match_regex_returns_the_first_exit_taken_or_negative_one() {
+    const char* examples[] = { "abc", "abcd", "a", "abcabc" };
+    const char* example_match[] = {
+        "abc", "abcd", "a", "abcabc", "aaabcbcaabcbc",
+    };
+    const int example_len[] = {
+        0, 1, 2, 3, -1,
+    };
+    Regex regex = compileMultiMatchingStrings(LEN(examples), examples);
+    for(int m = 0; m < LEN(example_match); m++) {
+        int exit_num = 0;
+        matchRegex(regex, example_match[m], &exit_num);
+        ASSERT_EX(exit_num == example_len[m], m);
+    }
+    disposeRegex(regex);
+    return SUCCESS;
+}
+
+TestResult string_starts_with_regex_returns_the_first_exit_taken_or_negative_one() {
+    const char* examples[] = { "abc", "abcd", "a", "abcabc" };
+    const char* example_match[] = {
+        "abcef", "abcdef", "aef", "abcabcef", "efaaabcbcaabcbc",
+    };
+    const int example_len[] = {
+        0, 1, 2, 3, -1,
+    };
+    Regex regex = compileMultiMatchingStrings(LEN(examples), examples);
+    for(int m = 0; m < LEN(example_match); m++) {
+        int exit_num = 0;
+        startsWithRegex(regex, example_match[m], NULL, &exit_num);
+        ASSERT_EX(exit_num == example_len[m], m);
+    }
+    disposeRegex(regex);
+    return SUCCESS;
+}
+
+TestResult string_regex_match_regex_returns_the_first_exit_taken_or_negative_one() {
+    const char* examples[] = { "abc", "abcd", "a*", "abc(abc)+" };
+    const bool example_regex[] = { false, false, true, true };
+    const char* example_match[] = {
+        "abc", "abcd", "aaaaaaa", "abcabcabcabc", "aaabcbcaabcbc",
+    };
+    const int example_len[] = {
+        0, 1, 2, 3, -1,
+    };
+    Regex regex = compileMultiMatchingStringsAndRegex(LEN(examples), example_regex, examples);
+    for(int m = 0; m < LEN(example_match); m++) {
+        int exit_num = 0;
+        matchRegex(regex, example_match[m], &exit_num);
+        ASSERT_EX(exit_num == example_len[m], m);
+    }
+    disposeRegex(regex);
+    return SUCCESS;
+}
+
+TestResult string_regex_starts_with_regex_returns_the_first_exit_taken_or_negative_one() {
+    const char* examples[] = { "abc", "abcd", "a+", "abc(abc)+" };
+    const bool example_regex[] = { false, false, true, true };
+    const char* example_match[] = {
+        "abcef", "abcdef", "aef", "abcabcef", "efaaabcbcaabcbc",
+    };
+    const int example_len[] = {
+        0, 1, 2, 3, -1,
+    };
+    Regex regex = compileMultiMatchingStringsAndRegex(LEN(examples), example_regex, examples);
+    for(int m = 0; m < LEN(example_match); m++) {
+        int exit_num = 0;
+        startsWithRegex(regex, example_match[m], NULL, &exit_num);
+        ASSERT_EX(exit_num == example_len[m], m);
+    }
+    disposeRegex(regex);
+    return SUCCESS;
+}
+
 static Test tests[] = {
     TEST(compiling_a_valid_regex_returns_non_null),
     TEST(compiling_a_invalid_regex_returns_null),
@@ -481,6 +579,12 @@ static Test tests[] = {
     TEST(starts_with_regex_returns_the_maximum_matching_length_or_negative_one),
     TEST(match_regex_returns_the_first_exit_taken_or_negative_one),
     TEST(starts_with_regex_returns_the_first_exit_taken_or_negative_one),
+    TEST(strings_match_themselfs),
+    TEST(strings_dont_match_other_strings),
+    TEST(string_match_regex_returns_the_first_exit_taken_or_negative_one),
+    TEST(string_starts_with_regex_returns_the_first_exit_taken_or_negative_one),
+    TEST(string_regex_match_regex_returns_the_first_exit_taken_or_negative_one),
+    TEST(string_regex_starts_with_regex_returns_the_first_exit_taken_or_negative_one),
 };
 
 int main() {
