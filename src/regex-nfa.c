@@ -468,3 +468,20 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
     *end_pos = regex;
     return current_node;
 }
+
+RegexNodeRef stringToNfa(RegexNodeSet* nodes, RegexNodeRef start, const char* string) {
+    RegexNodeRef current_node = start;
+    while(*string != 0) {
+        RegexNode node = REGEX_NODE_INIT;
+        RegexNodeRef node_ref = pushNodeToRegexNodeSet(nodes, node);
+        RegexConnection connection = {
+            .class_str = string,
+            .class_len = 1,
+            .next_node = node_ref,
+        };
+        pushConnectionToRegexNode(&nodes->nodes[current_node], connection);
+        current_node = node_ref;
+        string++;
+    }
+    return current_node;
+}

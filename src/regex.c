@@ -23,6 +23,17 @@ Regex compileMatchingRegex(const char* regex_string) {
     }
 }
 
+Regex compileMatchingString(const char* string) {
+    RegexNodeSet nodes = REGEX_NODE_SET_INIT;
+    RegexNode start = REGEX_NODE_INIT;
+    RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, start);
+    RegexNodeRef last_node = stringToNfa(&nodes, start_ref, string);
+    nodes.nodes[last_node].exit_num = 0;
+    Regex ret = compileRegexToStateMachine(&nodes, start_ref);
+    freeNodes(&nodes);
+    return ret;
+}
+
 Regex compileMultiMatchingRegex(int num_regex, const char* const* regex_strings) {
     RegexNodeSet nodes = REGEX_NODE_SET_INIT;
     RegexNode empty_node = REGEX_NODE_INIT;
@@ -43,6 +54,56 @@ Regex compileMultiMatchingRegex(int num_regex, const char* const* regex_strings)
         } else {
             nodes.nodes[last_node].exit_num = i;
         }
+    }
+    Regex ret = compileRegexToStateMachine(&nodes, start_ref);
+    freeNodes(&nodes);
+    return ret;
+}
+
+Regex compileMultiMatchingStrings(int num_strings, const char* const* strings) {
+    RegexNodeSet nodes = REGEX_NODE_SET_INIT;
+    RegexNode empty_node = REGEX_NODE_INIT;
+    RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, empty_node);
+    for(int i = 0; i < num_strings; i++) {
+        RegexNodeRef regex_start_ref = pushNodeToRegexNodeSet(&nodes, empty_node);
+        RegexConnection connection = {
+            .class_str = NULL,
+            .class_len = 0,
+            .next_node = regex_start_ref,
+        };
+        pushConnectionToRegexNode(&nodes.nodes[start_ref], connection);
+        RegexNodeRef last_node = stringToNfa(&nodes, regex_start_ref, strings[i]);
+        nodes.nodes[last_node].exit_num = i;
+    }
+    Regex ret = compileRegexToStateMachine(&nodes, start_ref);
+    freeNodes(&nodes);
+    return ret;
+}
+
+Regex compileMultiMatchingStringsAndRegex(int num_patterns, const bool* is_regex, const char* const* patterns) {
+    RegexNodeSet nodes = REGEX_NODE_SET_INIT;
+    RegexNode empty_node = REGEX_NODE_INIT;
+    RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, empty_node);
+    for(int i = 0; i < num_patterns; i++) {
+        RegexNodeRef regex_start_ref = pushNodeToRegexNodeSet(&nodes, empty_node);
+        RegexConnection connection = {
+            .class_str = NULL,
+            .class_len = 0,
+            .next_node = regex_start_ref,
+        };
+        pushConnectionToRegexNode(&nodes.nodes[start_ref], connection);
+        RegexNodeRef last_node;
+        if(is_regex[i]) {
+            const char* end_pos;
+            last_node = parseRegexGroup(&nodes, regex_start_ref, patterns[i], &end_pos, false);
+            if(last_node < 0 || *end_pos != 0) {
+                freeNodes(&nodes);
+                return NULL;
+            }
+        } else {
+            last_node = stringToNfa(&nodes, regex_start_ref, patterns[i]);
+        }
+        nodes.nodes[last_node].exit_num = i;
     }
     Regex ret = compileRegexToStateMachine(&nodes, start_ref);
     freeNodes(&nodes);

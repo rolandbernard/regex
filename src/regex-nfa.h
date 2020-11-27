@@ -35,4 +35,6 @@ void pushConnectionToRegexNode(RegexNode* node, RegexConnection conn);
 
 RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char* regex, const char** end_pos, bool inside_or);
 
+RegexNodeRef stringToNfa(RegexNodeSet* nodes, RegexNodeRef start, const char* string);
+
 #endif
