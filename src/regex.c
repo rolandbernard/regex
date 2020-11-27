@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "regex-nfa.h"
 #include "regex-dfa.h"
@@ -183,4 +184,20 @@ bool matchRegex(Regex regex, const char* string, int* exit_num) {
 
 void disposeRegex(Regex regex) {
     free(regex);
+}
+
+void printRegexDfa(Regex reg) {
+    for(int i = 0; i < reg->num_states; i++) {
+        if(reg->states[i][0].state_type == REGEX_STATE_END) {
+            fprintf(stderr, "%i*%i: ", reg->states[i][0].end_point, i);
+        } else {
+            fprintf(stderr, "  %i: ", i);
+        }
+        for(int j = 1; j < 256; j++) {
+            if(isprint(j) && reg->states[i][j].state_type == REGEX_STATE_NEXT) {
+                fprintf(stderr, "%c:%i ", (char)j, reg->states[i][j].next_state);
+            }
+        }
+        fprintf(stderr, "\n");
+    }
 }

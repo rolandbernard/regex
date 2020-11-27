@@ -21,4 +21,6 @@ bool matchRegex(Regex regex, const char* string, int* exit_num);
 
 void disposeRegex(Regex regex);
 
+void printRegexDfa(Regex reg);
+
 #endif
