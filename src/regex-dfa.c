@@ -5,16 +5,17 @@
 
 #include "regex-dfa.h"
 
-static void resolveCharacterClass(const char* class_str, int len, bool output[256]) {
+static void resolveCharacterClass(const char* class_str, int len, bool output[REGEX_NUM_CHARS + 1]) {
     output[0] = false;
+    output[REGEX_NUM_CHARS] = false;
     if (len == 1) {
         if(class_str[0] == '.') {
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = true;
             }
             output['\n'] = false;
         } else {
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = false;
             }
             if(class_str[0] == '$') {
@@ -30,7 +31,7 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
             inverted = true;
             i++;
         }
-        for(int c = 1; c < 256; c++) {
+        for(int c = 1; c < REGEX_NUM_CHARS; c++) {
             output[c] = inverted;
         }
         for(; i < len - 1; i++) {
@@ -39,126 +40,126 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
                 i++;
                 switch (class_str[i]) {
                 case 'w':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(isalnum(c) || c == '_') {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'W':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!(isalnum(c) || c == '_')) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'd':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(isdigit(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'D':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!isdigit(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 's':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(isspace(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'S':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!isspace(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'p':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(isprint(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'P':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!isprint(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'g':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(isgraph(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'G':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!isgraph(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'l':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(islower(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'L':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!islower(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'u':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(isupper(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'U':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!isupper(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'x':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(isxdigit(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'X':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!isxdigit(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'a':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(isalpha(c)) {
                             output[c] = !inverted;
                         }
                     }
                     break;
                 case 'A':
-                    for (int c = 1; c < 256; c++) {
+                    for (int c = 1; c < REGEX_NUM_CHARS; c++) {
                         if(!isalpha(c)) {
                             output[c] = !inverted;
                         }
@@ -254,97 +255,97 @@ static void resolveCharacterClass(const char* class_str, int len, bool output[25
     } else if (class_str[0] == '\\') {
         switch (class_str[1]) {
         case 'w':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = isalnum(c) || c == '_';
             }
             break;
         case 'W':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !(isalnum(c) || c == '_');
             }
             break;
         case 'd':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = isdigit(c);
             }
             break;
         case 'D':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !isdigit(c);
             }
             break;
         case 's':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = isspace(c);
             }
             break;
         case 'S':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !isspace(c);
             }
             break;
         case 'p':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = isprint(c);
             }
             break;
         case 'P':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !isprint(c);
             }
             break;
         case 'g':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = isgraph(c);
             }
             break;
         case 'G':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !isgraph(c);
             }
             break;
         case 'l':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = islower(c);
             }
             break;
         case 'L':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !islower(c);
             }
             break;
         case 'u':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = isupper(c);
             }
             break;
         case 'U':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !isupper(c);
             }
             break;
         case 'x':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = isxdigit(c);
             }
             break;
         case 'X':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !isxdigit(c);
             }
             break;
         case 'a':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = isalpha(c);
             }
             break;
         case 'A':
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = !isalpha(c);
             }
             break;
         default: {
-            for(int c = 1; c < 256; c++) {
+            for(int c = 1; c < REGEX_NUM_CHARS; c++) {
                 output[c] = false;
             }
             switch (class_str[1]) {
@@ -492,7 +493,7 @@ static RegexNodeCollection getNodesDirectlyReachableFrom(RegexNodeSet* nodes, Re
 }
 
 typedef struct {
-    RegexStateTransition (*regex)[256];
+    RegexStateTransition (*regex)[REGEX_NUM_CHARS + 1];
     int count;
     int capacity;
 } RegexStateList;
@@ -505,13 +506,13 @@ static void pushToRegexStateList(RegexStateList* list) {
         } else {
             list->capacity *= 2;
         }
-        list->regex = (RegexStateTransition (*)[256])realloc(list->regex, sizeof(RegexStateTransition[256]) * list->capacity);
+        list->regex = (RegexStateTransition (*)[REGEX_NUM_CHARS + 1])realloc(list->regex, sizeof(RegexStateTransition[REGEX_NUM_CHARS + 1]) * list->capacity);
     }
-    memset(list->regex[list->count], 0, 256 * sizeof(RegexStateTransition));
+    memset(list->regex[list->count], 0, (REGEX_NUM_CHARS + 1) * sizeof(RegexStateTransition));
     list->count++;
 }
 
-static bool areLinesEqual(bool (*data)[256], int line1, int line2, int row_len) {
+static bool areLinesEqual(bool (*data)[REGEX_NUM_CHARS + 1], int line1, int line2, int row_len) {
     for(int i = 0; i < row_len; i++) {
         if(data[i][line1] != data[i][line2]) {
             return false;
@@ -538,7 +539,7 @@ Regex compileRegexToStateMachine(RegexNodeSet* nodes, RegexNodeRef start) {
         }
         if(num_connections != 0) {
             int connection_dests[num_connections];
-            bool connection_class[num_connections][256];
+            bool connection_class[num_connections][REGEX_NUM_CHARS + 1];
             int index = 0;
             for (int n = 0; n < col.num_nodes; n++) {
                 RegexNode node = nodes->nodes[col.nodes[n]];
@@ -552,8 +553,8 @@ Regex compileRegexToStateMachine(RegexNodeSet* nodes, RegexNodeRef start) {
             }
             int start_index = 0;
             int end_index = 1;
-            while (start_index < 256) {
-                if (end_index < 256 && areLinesEqual(connection_class, start_index, end_index, num_connections)) {
+            while (start_index <= REGEX_NUM_CHARS) {
+                if (end_index <= REGEX_NUM_CHARS && areLinesEqual(connection_class, start_index, end_index, num_connections)) {
                     end_index++;
                 } else {
                     int num_dests = 0;
@@ -596,7 +597,7 @@ Regex compileRegexToStateMachine(RegexNodeSet* nodes, RegexNodeRef start) {
                 }
             }
         } else if(col.exit_num != -1) {
-            for (int i = 0; i < 256; i++) {
+            for (int i = 0; i <= REGEX_NUM_CHARS; i++) {
                 ret.regex[col.id][i].state_type = REGEX_STATE_END;
                 ret.regex[col.id][i].end_point = col.exit_num;
             }
@@ -606,9 +607,9 @@ Regex compileRegexToStateMachine(RegexNodeSet* nodes, RegexNodeRef start) {
         free(to_resolve.nodes[i].nodes);
     }
     free(to_resolve.nodes);
-    Regex return_regex = (Regex)malloc(sizeof(RegexTransitionTable) + ret.count * sizeof(RegexStateTransition[256]));
+    Regex return_regex = (Regex)malloc(sizeof(RegexTransitionTable) + ret.count * sizeof(RegexStateTransition[REGEX_NUM_CHARS + 1]));
     return_regex->num_states = ret.count;
-    memcpy(return_regex->states, ret.regex, ret.count * sizeof(RegexStateTransition[256]));
+    memcpy(return_regex->states, ret.regex, ret.count * sizeof(RegexStateTransition[REGEX_NUM_CHARS + 1]));
     free(ret.regex);
     return return_regex;
 }
