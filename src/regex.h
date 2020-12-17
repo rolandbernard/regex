@@ -5,6 +5,10 @@
 
 #include "regex-type.h"
 
+bool checkIfRegexIsValidN(const char* regex_string, int len);
+
+bool checkIfRegexIsValid(const char* regex_string);
+
 Regex compileMatchingRegexN(const char* regex_string, int len);
 
 Regex compileMatchingRegex(const char* regex_string);

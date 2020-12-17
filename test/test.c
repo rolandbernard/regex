@@ -3,6 +3,24 @@
 #include "regex-type.h"
 #include "test.h"
         
+TestResult cheching_a_valid_regex_returns_true() {
+    const char* examples[] = {"test", "ab*c", "d(e?f)*", "(qe)?*d+", "(a?b+){3}", "(a?b+c){1,4}", "(x?yz){3,}", "((a+b)+c|cb|de|cd)+" };
+    for(int e = 0; e < LEN(examples); e++) {
+        bool is_valid = checkIfRegexIsValid(examples[e]);
+        ASSERT_EX(is_valid, e);
+    }
+    return SUCCESS;
+}
+
+TestResult checking_a_invalid_regex_returns_false() {
+    const char* examples[] = { "test[", "test{", "**", "++", "??", "{", "{5}", "ab(c", "a{0}", "a{0,0}" };
+    for(int e = 0; e < LEN(examples); e++) {
+        bool is_valid = checkIfRegexIsValid(examples[e]);
+        ASSERT_EX(!is_valid, e);
+    }
+    return SUCCESS;
+}
+        
 TestResult compiling_a_valid_regex_returns_non_null() {
     const char* examples[] = {"test", "ab*c", "d(e?f)*", "(qe)?*d+", "(a?b+){3}", "(a?b+c){1,4}", "(x?yz){3,}", "((a+b)+c|cb|de|cd)+" };
     for(int e = 0; e < LEN(examples); e++) {
@@ -555,6 +573,8 @@ TestResult string_regex_starts_with_regex_returns_the_first_exit_taken_or_negati
 }
 
 static Test tests[] = {
+    TEST(cheching_a_valid_regex_returns_true),
+    TEST(checking_a_invalid_regex_returns_false),
     TEST(compiling_a_valid_regex_returns_non_null),
     TEST(compiling_a_invalid_regex_returns_null),
     TEST(simple_strings_match_themselfs),

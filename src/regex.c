@@ -8,6 +8,25 @@
 #include "regex-dfa.h"
 #include "regex.h"
 
+bool checkIfRegexIsValidN(const char* regex_string, int len) {
+    RegexNodeSet nodes = REGEX_NODE_SET_INIT;
+    RegexNode start = REGEX_NODE_INIT;
+    RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, start);
+    const char* end_pos;
+    RegexNodeRef last_node = parseRegexGroup(&nodes, start_ref, regex_string, len, &end_pos, false);
+    if(last_node < 0 || *end_pos != 0) {
+        freeNodes(&nodes);
+        return false;
+    } else {
+        freeNodes(&nodes);
+        return true;
+    }
+}
+
+bool checkIfRegexIsValid(const char* regex_string) {
+    return checkIfRegexIsValidN(regex_string, strlen(regex_string));
+}
+
 Regex compileMatchingRegexN(const char* regex_string, int len) {
     RegexNodeSet nodes = REGEX_NODE_SET_INIT;
     RegexNode start = REGEX_NODE_INIT;
@@ -294,3 +313,4 @@ void printRegexDfa(Regex reg) {
         fprintf(stderr, "\n");
     }
 }
+
