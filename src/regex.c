@@ -14,7 +14,7 @@ int getRegexErrorLocationN(const char* regex_string, int len) {
     RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, start);
     const char* end_pos;
     RegexNodeRef last_node = parseRegexGroup(&nodes, start_ref, regex_string, len, &end_pos, false);
-    if(last_node < 0 || *end_pos != 0) {
+    if(last_node < 0 || end_pos != regex_string + len) {
         freeNodes(&nodes);
         return (int)(end_pos - regex_string);
     } else {
@@ -33,7 +33,7 @@ Regex compileMatchingRegexN(const char* regex_string, int len) {
     RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, start);
     const char* end_pos;
     RegexNodeRef last_node = parseRegexGroup(&nodes, start_ref, regex_string, len, &end_pos, false);
-    if(last_node < 0 || *end_pos != 0) {
+    if(last_node < 0 || end_pos != regex_string + len) {
         freeNodes(&nodes);
         return NULL;
     } else {
@@ -77,7 +77,7 @@ Regex compileMultiMatchingRegexN(int num_regex, const char* const* regex_strings
         pushConnectionToRegexNode(&nodes.nodes[start_ref], connection);
         const char* end_pos;
         RegexNodeRef last_node = parseRegexGroup(&nodes, regex_start_ref, regex_strings[i], lengths[i], &end_pos, false);
-        if(last_node < 0 || *end_pos != 0) {
+        if(last_node < 0 || end_pos != regex_strings[i] + lengths[i]) {
             freeNodes(&nodes);
             return NULL;
         } else {
@@ -141,7 +141,7 @@ Regex compileMultiMatchingStringsAndRegexN(int num_patterns, const bool* is_rege
         if(is_regex[i]) {
             const char* end_pos;
             last_node = parseRegexGroup(&nodes, regex_start_ref, patterns[i], lengths[i], &end_pos, false);
-            if(last_node < 0 || *end_pos != 0) {
+            if(last_node < 0 || end_pos != patterns[i] + lengths[i]) {
                 freeNodes(&nodes);
                 return NULL;
             }

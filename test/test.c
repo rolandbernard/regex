@@ -17,7 +17,6 @@ TestResult checking_a_invalid_regex_returns_the_error_location() {
     int errors[] = { 4, 4, 0, 0, 0, 0, 0, 2, 1, 1 };
     for(int e = 0; e < LEN(examples); e++) {
         int error = getRegexErrorLocation(examples[e]);
-        fprintf(stderr, "%i\n", error);
         ASSERT_EX(error == errors[e], e);
     }
     return SUCCESS;
