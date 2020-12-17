@@ -75,6 +75,7 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
                 len++;
             }
             if(regex[len] == 0) {
+                *end_pos = regex;
                 return -1;
             } else {
                 len++;
@@ -94,14 +95,16 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
             break;
         }
         case '(': {
+            const char* error_pos = regex;
             regex++;
             size--;
             last_node = current_node;
-            const char* end_pos;
-            current_node = parseRegexGroup(nodes, current_node, regex, size, &end_pos, false);
-            size -= (end_pos - regex);
-            regex = end_pos;
+            const char* ending_pos;
+            current_node = parseRegexGroup(nodes, current_node, regex, size, &ending_pos, false);
+            size -= (ending_pos - regex);
+            regex = ending_pos;
             if(current_node == -1 || *regex != ')') {
+                *end_pos = error_pos;
                 return -1;
             } else {
                 regex++;
@@ -149,11 +152,12 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
                 pushConnectionToRegexNode(&nodes->nodes[start], connection);
                 regex++;
                 size--;
-                const char* end_pos;
-                RegexNodeRef end_node = parseRegexGroup(nodes, or_start_node_ref, regex, size, &end_pos, true);
-                size -= (end_pos - regex);
-                regex = end_pos;
+                const char* ending_pos;
+                RegexNodeRef end_node = parseRegexGroup(nodes, or_start_node_ref, regex, size, &ending_pos, true);
+                size -= (ending_pos - regex);
+                regex = ending_pos;
                 if(end_node == -1) {
+                    *end_pos = regex;
                     return -1;
                 } else {
                     // 4
@@ -166,6 +170,7 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
                 }
             }
             if(*regex != 0 && *regex != ')') {
+                *end_pos = regex;
                 return -1;
             } else {
                 last_node = start;
@@ -175,6 +180,7 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
         }
         case '?': {
             if(last_node == -1) {
+                *end_pos = regex;
                 return -1;
             } else {
                 regex++;
@@ -207,6 +213,7 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
         }
         case '*': {
             if(last_node == -1) {
+                *end_pos = regex;
                 return -1;
             } else {
                 regex++;
@@ -257,6 +264,7 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
         }
         case '+': {
             if(last_node == -1) {
+                *end_pos = regex;
                 return -1;
             } else {
                 regex++;
@@ -298,7 +306,9 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
             break;
         }
         case '{': {
+            const char* error_pos = regex;
             if(last_node == -1) {
+                *end_pos = error_pos;
                 return -1;
             } else {
                 regex++;
@@ -343,9 +353,11 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
                     }
                 }
                 if(*regex != '}' || (max != -1 && max < min)) {
+                    *end_pos = error_pos;
                     return -1;
                 } else {
                     if(min == 0 && max == 0) {
+                        *end_pos = error_pos;
                         return -1;
                     }
                     regex++;

@@ -5,9 +5,9 @@
 
 #include "regex-type.h"
 
-bool checkIfRegexIsValidN(const char* regex_string, int len);
+int getRegexErrorLocationN(const char* regex_string, int len);
 
-bool checkIfRegexIsValid(const char* regex_string);
+int getRegexErrorLocation(const char* regex_string);
 
 Regex compileMatchingRegexN(const char* regex_string, int len);
 

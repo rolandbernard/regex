@@ -8,7 +8,7 @@
 #include "regex-dfa.h"
 #include "regex.h"
 
-bool checkIfRegexIsValidN(const char* regex_string, int len) {
+int getRegexErrorLocationN(const char* regex_string, int len) {
     RegexNodeSet nodes = REGEX_NODE_SET_INIT;
     RegexNode start = REGEX_NODE_INIT;
     RegexNodeRef start_ref = pushNodeToRegexNodeSet(&nodes, start);
@@ -16,15 +16,15 @@ bool checkIfRegexIsValidN(const char* regex_string, int len) {
     RegexNodeRef last_node = parseRegexGroup(&nodes, start_ref, regex_string, len, &end_pos, false);
     if(last_node < 0 || *end_pos != 0) {
         freeNodes(&nodes);
-        return false;
+        return (int)(end_pos - regex_string);
     } else {
         freeNodes(&nodes);
-        return true;
+        return -1;
     }
 }
 
-bool checkIfRegexIsValid(const char* regex_string) {
-    return checkIfRegexIsValidN(regex_string, strlen(regex_string));
+int getRegexErrorLocation(const char* regex_string) {
+    return getRegexErrorLocationN(regex_string, strlen(regex_string));
 }
 
 Regex compileMatchingRegexN(const char* regex_string, int len) {
