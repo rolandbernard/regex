@@ -250,7 +250,7 @@ break_for_loop:
         return false;
         break;
     case REGEX_STATE_END:
-        if(*string == 0) {
+        if (size == 0) {
             if(exit_num != NULL) {
                 *exit_num = transition.end_point;
             }
