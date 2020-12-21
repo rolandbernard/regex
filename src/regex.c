@@ -175,9 +175,9 @@ bool startsWithRegexN(Regex regex, const char* string, int size, int* len_out, i
             goto break_for_loop;
             break;
         case REGEX_STATE_NEXT:
-            if(regex->states[state][0].state_type == REGEX_STATE_END) {
+            if(regex->states[state][REGEX_STATE_NEXT].state_type == REGEX_STATE_END) {
                 last_len = len;
-                last_exit = regex->states[state][0].end_point;
+                last_exit = regex->states[state][REGEX_STATE_NEXT].end_point;
             }
             state = transition.next_state;
             break;

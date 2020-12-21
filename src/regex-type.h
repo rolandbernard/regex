@@ -15,13 +15,13 @@ typedef struct {
     };
 } RegexStateTransition;
 
+#define REGEX_NUM_CHARS 256
+
 typedef struct {
     int num_states;
-    RegexStateTransition states[][257];
+    RegexStateTransition states[][REGEX_NUM_CHARS + 1];
 } RegexTransitionTable;
 
 typedef RegexTransitionTable* Regex;
-
-#define REGEX_NUM_CHARS 256
 
 #endif
