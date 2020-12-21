@@ -172,17 +172,7 @@ bool startsWithRegexN(Regex regex, const char* string, int size, int* len_out, i
         RegexStateTransition transition = regex->states[state][(unsigned char)*string];
         switch (transition.state_type) {
         case REGEX_STATE_DEADEND:
-            if(len_out != NULL) {
-                *len_out = last_len;
-            }
-            if(exit_num != NULL) {
-                *exit_num = last_exit;
-            }
-            if(last_len == -1) {
-                return false;
-            } else {
-                return true;
-            }
+            goto break_for_loop;
             break;
         case REGEX_STATE_NEXT:
             if(regex->states[state][0].state_type == REGEX_STATE_END) {
@@ -192,17 +182,13 @@ bool startsWithRegexN(Regex regex, const char* string, int size, int* len_out, i
             state = transition.next_state;
             break;
         case REGEX_STATE_END:
-            if(len_out != NULL) {
-                *len_out = len;
-            }
-            if(exit_num != NULL) {
-                *exit_num = transition.end_point;
-            }
-            return true;
+            goto break_for_loop;
             break;
         }
     }
-    RegexStateTransition transition = regex->states[state][REGEX_NUM_CHARS];
+    RegexStateTransition transition;
+break_for_loop:
+    transition = regex->states[state][REGEX_NUM_CHARS];
     switch (transition.state_type) {
     default:
     case REGEX_STATE_NEXT:
@@ -241,30 +227,19 @@ bool matchRegexN(Regex regex, const char* string, int size, int* exit_num) {
         RegexStateTransition transition = regex->states[state][(unsigned char)*string];
         switch (transition.state_type) {
         case REGEX_STATE_DEADEND:
-            if(exit_num != NULL) {
-                *exit_num = -1;
-            }
-            return false;
+            goto break_for_loop;
             break;
         case REGEX_STATE_NEXT:
             state = transition.next_state;
             break;
         case REGEX_STATE_END:
-            if(*string == 0) {
-                if(exit_num != NULL) {
-                    *exit_num = transition.end_point;
-                }
-                return true;
-            } else {
-                if(exit_num != NULL) {
-                    *exit_num = -1;
-                }
-                return false;
-            }
+            goto break_for_loop;
             break;
         }
     }
-    RegexStateTransition transition = regex->states[state][REGEX_NUM_CHARS];
+    RegexStateTransition transition;
+break_for_loop:
+    transition = regex->states[state][REGEX_NUM_CHARS];
     switch (transition.state_type) {
     default:
     case REGEX_STATE_NEXT:
