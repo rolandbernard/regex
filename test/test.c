@@ -11,6 +11,16 @@ TestResult cheching_a_valid_regex_returns_negative_one() {
     }
     return SUCCESS;
 }
+        
+TestResult cheching_a_valid_sized_regex_returns_negative_one() {
+    const char* examples[] = {"test[", "ab*c[", "d(e?f)*[", "(qe)?*d+[", "(a?b+){3}[", "(a?b+c){1,4}[", "(x?yz){3,}[", "((a+b)+c|cb|de|cd)+[", "\\s[" };
+    int examples_len[] = { 4, 4, 7, 8, 9, 12, 10, 19, 2 };
+    for(int e = 0; e < LEN(examples); e++) {
+        int error = getRegexErrorLocationN(examples[e], examples_len[e]);
+        ASSERT_EX(error == -1, e);
+    }
+    return SUCCESS;
+}
 
 TestResult checking_a_invalid_regex_returns_the_error_location() {
     const char* examples[] = { "test[", "test{", "**", "++", "??", "{", "{5}", "ab(c", "a{0}", "a{0,0}" };
@@ -21,11 +31,33 @@ TestResult checking_a_invalid_regex_returns_the_error_location() {
     }
     return SUCCESS;
 }
+
+TestResult checking_a_invalid_sized_regex_returns_the_error_location() {
+    const char* examples[] = { "test[]", "test{1}", "**+", "+++", "??+", "{+", "{5}+", "ab(c)", "a{0}+", "a{0,0}+" };
+    int examples_len[] = { 5, 5, 2, 2, 2, 1, 3, 4, 4, 6 };
+    int errors[] = { 4, 4, 0, 0, 0, 0, 0, 2, 1, 1 };
+    for(int e = 0; e < LEN(examples); e++) {
+        int error = getRegexErrorLocationN(examples[e], examples_len[e]);
+        ASSERT_EX(error == errors[e], e);
+    }
+    return SUCCESS;
+}
         
 TestResult compiling_a_valid_regex_returns_non_null() {
     const char* examples[] = {"test", "ab*c", "d(e?f)*", "(qe)?*d+", "(a?b+){3}", "(a?b+c){1,4}", "(x?yz){3,}", "((a+b)+c|cb|de|cd)+" };
     for(int e = 0; e < LEN(examples); e++) {
         Regex regex = compileMatchingRegex(examples[e]);
+        ASSERT_EX(regex != NULL, e);
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+        
+TestResult compiling_a_valid_sized_regex_returns_non_null() {
+    const char* examples[] = {"test(", "ab*c(", "d(e?f)*(", "(qe)?*d+(", "(a?b+){3}(", "(a?b+c){1,4}(", "(x?yz){3,}(", "((a+b)+c|cb|de|cd)+(" };
+    int examples_len[] = { 4, 4, 7, 8, 9, 12, 10, 19 };
+    for(int e = 0; e < LEN(examples); e++) {
+        Regex regex = compileMatchingRegexN(examples[e], examples_len[e]);
         ASSERT_EX(regex != NULL, e);
         disposeRegex(regex);
     }
@@ -42,11 +74,34 @@ TestResult compiling_a_invalid_regex_returns_null() {
     return SUCCESS;
 }
 
+TestResult compiling_a_invalid_sized_regex_returns_null() {
+    const char* examples[] = { "test[]", "test{}", "**+", "+++", "??+", "{+", "{5}+", "ab(c+", "a{0}+", "a{0,0}+" };
+    int examples_len[] = { 5, 5, 2, 2, 2, 1, 3, 4, 4, 6 };
+    for(int e = 0; e < LEN(examples); e++) {
+        Regex regex = compileMatchingRegexN(examples[e], examples_len[e]);
+        ASSERT_EX(regex == NULL, e);
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+
 TestResult simple_strings_match_themselfs() {
     const char* examples[] = { "test", "abc", "def", "qed" };
     for(int e = 0; e < LEN(examples); e++) {
         Regex regex = compileMatchingRegex(examples[e]);
         ASSERT_EX(matchRegex(regex, examples[e], NULL), e);
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+
+TestResult simple_sized_strings_match_themselfs() {
+    const char* examples1[] = { "test+", "abc+", "def+", "qed+" };
+    const char* examples2[] = { "test-", "abc-", "def-", "qed-" };
+    int examples_len[] = { 4, 3, 3, 3 };
+    for(int e = 0; e < LEN(examples1); e++) {
+        Regex regex = compileMatchingRegexN(examples1[e], examples_len[e]);
+        ASSERT_EX(matchRegexN(regex, examples2[e], examples_len[e], NULL), e);
         disposeRegex(regex);
     }
     return SUCCESS;
@@ -59,6 +114,22 @@ TestResult simple_strings_dont_match_other_strings() {
         for(int m = 0; m < LEN(examples); m++) {
             if(m != e) {
                 ASSERT_EX_MA(!matchRegex(regex, examples[m], NULL), e, m);
+            }
+        }
+        disposeRegex(regex);
+    }
+    return SUCCESS;
+}
+
+TestResult simple_sized_strings_dont_match_other_strings() {
+    const char* examples1[] = { "test+", "abc+", "def+", "qed+" };
+    const char* examples2[] = { "test-", "abc-", "def-", "qed-" };
+    int examples_len[] = { 4, 3, 3, 3 };
+    for(int e = 0; e < LEN(examples1); e++) {
+        Regex regex = compileMatchingRegexN(examples1[e], examples_len[e]);
+        for(int m = 0; m < LEN(examples1); m++) {
+            if(m != e) {
+                ASSERT_EX_MA(!matchRegexN(regex, examples2[m], examples_len[e], NULL), e, m);
             }
         }
         disposeRegex(regex);
@@ -575,11 +646,17 @@ TestResult string_regex_starts_with_regex_returns_the_first_exit_taken_or_negati
 
 static Test tests[] = {
     TEST(cheching_a_valid_regex_returns_negative_one),
+    TEST(cheching_a_valid_sized_regex_returns_negative_one),
     TEST(checking_a_invalid_regex_returns_the_error_location),
+    TEST(checking_a_invalid_sized_regex_returns_the_error_location),
     TEST(compiling_a_valid_regex_returns_non_null),
+    TEST(compiling_a_valid_sized_regex_returns_non_null),
     TEST(compiling_a_invalid_regex_returns_null),
+    TEST(compiling_a_invalid_sized_regex_returns_null),
     TEST(simple_strings_match_themselfs),
+    TEST(simple_sized_strings_match_themselfs),
     TEST(simple_strings_dont_match_other_strings),
+    TEST(simple_sized_strings_dont_match_other_strings),
     TEST(using_the_pipe_matches_one_of_the_options),
     TEST(using_the_pipe_doesnt_match_a_string_not_in_the_options),
     TEST(using_the_star_matches_zero_or_more_of_the_previous_group),
