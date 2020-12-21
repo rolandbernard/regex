@@ -64,17 +64,17 @@ static RegexNodeRef cloneLastNodes(RegexNodeSet* nodes, RegexNodeRef start, Rege
 RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char* regex, int size, const char** end_pos, bool inside_or) {
     RegexNodeRef last_node = -1;
     RegexNodeRef current_node = start;
-    while(size != 0 && *regex != ')' && (!inside_or || *regex != '|')) {
+    while(size > 0 && *regex != ')' && (!inside_or || *regex != '|')) {
         switch (*regex) {
         case '[': {
             int len = 1;
-            while(regex[len] != 0 && regex[len] != ']') {
+            while(size - len > 0 && regex[len] != ']') {
                 if(regex[len] == '\\') {
                     len++;
                 }
                 len++;
             }
-            if(regex[len] == 0) {
+            if(size - len == 0) {
                 *end_pos = regex;
                 return -1;
             } else {
@@ -103,7 +103,7 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
             current_node = parseRegexGroup(nodes, current_node, regex, size, &ending_pos, false);
             size -= (ending_pos - regex);
             regex = ending_pos;
-            if(current_node == -1 || *regex != ')') {
+            if(current_node == -1 || size == 0 || *regex != ')') {
                 *end_pos = error_pos;
                 return -1;
             } else {
@@ -169,7 +169,7 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
                     pushConnectionToRegexNode(&nodes->nodes[end_node], connection);
                 }
             }
-            if(*regex != 0 && *regex != ')') {
+            if(size > 0 && *regex != ')') {
                 *end_pos = regex;
                 return -1;
             } else {
@@ -314,23 +314,23 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
                 regex++;
                 size--;
                 int min = 0;
-                while (isspace(*regex)) {
+                while (size > 0 && isspace(*regex)) {
                     regex++;
                     size--;
                 }
-                while (*regex >= '0' && *regex <= '9') {
+                while (size > 0 && *regex >= '0' && *regex <= '9') {
                     min *= 10;
                     min += *regex - '0';
                     regex++;
                     size--;
                 }
-                while (isspace(*regex)) {
+                while (size > 0 && isspace(*regex)) {
                     regex++;
                     size--;
                 }
                 int max = min;
                 if(*regex == ',') {
-                    while (isspace(*regex)) {
+                    while (size > 0 && isspace(*regex)) {
                         regex++;
                         size--;
                     }
@@ -340,14 +340,14 @@ RegexNodeRef parseRegexGroup(RegexNodeSet* nodes, RegexNodeRef start, const char
                         max = -1;
                     } else {
                         max = 0;
-                        while (*regex >= '0' && *regex <= '9') {
+                        while (size > 0 && *regex >= '0' && *regex <= '9') {
                             max *= 10;
                             max += *regex - '0';
                             regex++;
                             size--;
                         }
                     }
-                    while (isspace(*regex)) {
+                    while (size > 0 && isspace(*regex)) {
                         regex++;
                         size--;
                     }
